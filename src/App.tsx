@@ -23,7 +23,7 @@ const App = () => (
         <Navbar />
         <Routes>
           <Route path="/" element={<RoomsPage />} />
-          <Route path="/arena" element={<ArenaPage />} />
+          <Route path="/arena/:roomCode" element={<ArenaPage />} />
           <Route path="/visualize" element={<VisualizePage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="*" element={<NotFound />} />
