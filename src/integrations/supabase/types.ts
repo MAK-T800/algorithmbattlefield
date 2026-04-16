@@ -14,6 +14,54 @@ export type Database = {
   }
   public: {
     Tables: {
+      room_answers: {
+        Row: {
+          answered_at: string
+          id: string
+          is_correct: boolean
+          participant_id: string
+          question_index: number
+          room_id: string
+          selected_option: number
+          time_taken_ms: number
+        }
+        Insert: {
+          answered_at?: string
+          id?: string
+          is_correct?: boolean
+          participant_id: string
+          question_index: number
+          room_id: string
+          selected_option: number
+          time_taken_ms?: number
+        }
+        Update: {
+          answered_at?: string
+          id?: string
+          is_correct?: boolean
+          participant_id?: string
+          question_index?: number
+          room_id?: string
+          selected_option?: number
+          time_taken_ms?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "room_answers_participant_id_fkey"
+            columns: ["participant_id"]
+            isOneToOne: false
+            referencedRelation: "room_participants"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "room_answers_room_id_fkey"
+            columns: ["room_id"]
+            isOneToOne: false
+            referencedRelation: "rooms"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       room_participants: {
         Row: {
           created_at: string
@@ -64,33 +112,48 @@ export type Database = {
       rooms: {
         Row: {
           created_at: string
+          current_question_index: number
           host_name: string
           id: string
           max_participants: number
           problem_id: number
+          question_started_at: string | null
+          quiz_started: boolean
           room_code: string
+          room_password: string
           started_at: string | null
           status: string
+          topic: string
         }
         Insert: {
           created_at?: string
+          current_question_index?: number
           host_name: string
           id?: string
           max_participants?: number
           problem_id?: number
+          question_started_at?: string | null
+          quiz_started?: boolean
           room_code: string
+          room_password?: string
           started_at?: string | null
           status?: string
+          topic?: string
         }
         Update: {
           created_at?: string
+          current_question_index?: number
           host_name?: string
           id?: string
           max_participants?: number
           problem_id?: number
+          question_started_at?: string | null
+          quiz_started?: boolean
           room_code?: string
+          room_password?: string
           started_at?: string | null
           status?: string
+          topic?: string
         }
         Relationships: []
       }
