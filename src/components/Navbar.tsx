@@ -1,10 +1,9 @@
 import logo from "@/assets/logo.png";
 import { Link, useLocation } from "react-router-dom";
-import { Users, Swords, Eye, Trophy } from "lucide-react";
+import { Users, Swords, Eye, Trophy, BookOpen } from "lucide-react";
 
 const navItems = [
   { to: "/", icon: Users, label: "Rooms" },
-  { to: "/arena", icon: Swords, label: "Arena" },
   { to: "/visualize", icon: Eye, label: "Visualize" },
   { to: "/leaderboard", icon: Trophy, label: "Leaderboard" },
 ];
@@ -16,11 +15,11 @@ export default function Navbar() {
     <nav className="fixed top-0 left-0 right-0 z-50 glass-panel-strong rounded-none border-x-0 border-t-0">
       <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
         <Link to="/" className="flex items-center">
-          <img src={logo} alt="Algorithm Battlefield" className="h-10" />
+          <img src={logo} alt="Platform" className="h-10" />
         </Link>
         <div className="flex items-center gap-1">
           {navItems.map((item) => {
-            const active = location.pathname === item.to;
+            const active = location.pathname === item.to || (item.to === "/" && location.pathname.startsWith("/quiz"));
             return (
               <Link
                 key={item.to}

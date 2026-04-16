@@ -7,6 +7,7 @@ import ParticleBackground from "@/components/ParticleBackground";
 import Navbar from "@/components/Navbar";
 import RoomsPage from "./pages/RoomsPage";
 import ArenaPage from "./pages/ArenaPage";
+import QuizBattlePage from "./pages/QuizBattlePage";
 import VisualizePage from "./pages/VisualizePage";
 import LeaderboardPage from "./pages/LeaderboardPage";
 import NotFound from "./pages/NotFound";
@@ -24,6 +25,7 @@ const App = () => (
         <Routes>
           <Route path="/" element={<RoomsPage />} />
           <Route path="/arena/:roomCode" element={<ArenaPage />} />
+          <Route path="/quiz/:roomCode" element={<QuizBattlePage />} />
           <Route path="/visualize" element={<VisualizePage />} />
           <Route path="/leaderboard" element={<LeaderboardPage />} />
           <Route path="*" element={<NotFound />} />

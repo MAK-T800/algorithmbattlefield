@@ -1,11 +1,11 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Zap, Plus, ArrowRight, LogIn, Loader2 } from "lucide-react";
+import { Users, Zap, Plus, ArrowRight, LogIn, Loader2, Lock, BookOpen } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getSessionId, getUsername, setUsername, generateRoomCode } from "@/lib/session";
 import { useRoomsList } from "@/hooks/useRoomsList";
-import { PROBLEMS } from "@/lib/problems";
+import { TOPICS } from "@/lib/mcqQuestions";
 
 const difficultyColor: Record<string, string> = {
   Easy: "text-neon-cyan",
@@ -19,8 +19,10 @@ export default function RoomsPage() {
   const [showCreate, setShowCreate] = useState(false);
   const [showJoin, setShowJoin] = useState(false);
   const [joinCode, setJoinCode] = useState("");
+  const [joinPassword, setJoinPassword] = useState("");
   const [userName, setUserName] = useState(getUsername() || "");
-  const [selectedProblem, setSelectedProblem] = useState(1);
+  const [selectedTopic, setSelectedTopic] = useState("dsa");
+  const [roomPassword, setRoomPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -35,6 +37,7 @@ export default function RoomsPage() {
 
   const handleCreate = async () => {
     if (!ensureUsername()) return;
+    if (!roomPassword.trim()) { setError("Set a room password"); return; }
     setBusy(true);
     setError("");
     const code = generateRoomCode();
@@ -42,7 +45,13 @@ export default function RoomsPage() {
 
     const { data: room, error: roomErr } = await supabase
       .from("rooms")
-      .insert({ room_code: code, host_name: userName.trim(), problem_id: selectedProblem })
+      .insert({
+        room_code: code,
+        host_name: userName.trim(),
+        problem_id: 1,
+        topic: selectedTopic,
+        room_password: roomPassword.trim(),
+      })
       .select()
       .single();
 
@@ -59,7 +68,7 @@ export default function RoomsPage() {
       is_host: true,
     });
 
-    navigate(`/arena/${code}`);
+    navigate(`/quiz/${code}`);
   };
 
   const handleJoin = async (code?: string) => {
@@ -82,7 +91,14 @@ export default function RoomsPage() {
       return;
     }
 
-    // Check if already joined
+    // Verify password (check against DB value)
+    const roomData = room as any;
+    if (roomData.room_password && roomData.room_password !== joinPassword.trim() && !code) {
+      setError("Wrong password");
+      setBusy(false);
+      return;
+    }
+
     const { data: existing } = await supabase
       .from("room_participants")
       .select("id")
@@ -98,7 +114,7 @@ export default function RoomsPage() {
       });
     }
 
-    navigate(`/arena/${roomCode}`);
+    navigate(`/quiz/${roomCode}`);
   };
 
   return (
@@ -108,15 +124,15 @@ export default function RoomsPage() {
         <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex items-center justify-between mb-8">
           <div>
             <h1 className="text-3xl font-display font-bold text-foreground">
-              Battle <span className="text-primary neon-text-blue">Rooms</span>
+              Quiz <span className="text-primary neon-text-blue">Battles</span>
             </h1>
-            <p className="text-muted-foreground mt-1">Create or join a real-time coding arena</p>
+            <p className="text-muted-foreground mt-1">Create or join a real-time quiz arena</p>
           </div>
           <div className="flex gap-2">
-            <button onClick={() => { setShowJoin(true); setShowCreate(false); }} className="glass-panel flex items-center gap-2 px-5 py-3 text-primary hover:bg-primary/10 transition-all font-semibold">
+            <button onClick={() => { setShowJoin(true); setShowCreate(false); setError(""); }} className="glass-panel flex items-center gap-2 px-5 py-3 text-primary hover:bg-primary/10 transition-all font-semibold">
               <LogIn className="w-4 h-4" /> Join Room
             </button>
-            <button onClick={() => { setShowCreate(true); setShowJoin(false); }} className="glass-panel flex items-center gap-2 px-5 py-3 text-primary hover:bg-primary/10 transition-all font-semibold">
+            <button onClick={() => { setShowCreate(true); setShowJoin(false); setError(""); }} className="glass-panel flex items-center gap-2 px-5 py-3 text-primary hover:bg-primary/10 transition-all font-semibold">
               <Plus className="w-4 h-4" /> Create Room
             </button>
           </div>
@@ -138,24 +154,58 @@ export default function RoomsPage() {
                   className="bg-muted/50 rounded-lg px-4 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground border border-border focus:border-primary/50 transition-colors"
                 />
                 {showJoin && (
-                  <input
-                    value={joinCode}
-                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                    placeholder="Room Code (e.g. ABC123)"
-                    maxLength={6}
-                    className="bg-muted/50 rounded-lg px-4 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground border border-border focus:border-primary/50 transition-colors font-mono tracking-widest"
-                  />
+                  <>
+                    <input
+                      value={joinCode}
+                      onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+                      placeholder="Room Code (e.g. ABC123)"
+                      maxLength={6}
+                      className="bg-muted/50 rounded-lg px-4 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground border border-border focus:border-primary/50 transition-colors font-mono tracking-widest"
+                    />
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input
+                        value={joinPassword}
+                        onChange={(e) => setJoinPassword(e.target.value)}
+                        placeholder="Room Password"
+                        type="password"
+                        className="bg-muted/50 rounded-lg pl-10 pr-4 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground border border-border focus:border-primary/50 transition-colors w-full"
+                      />
+                    </div>
+                  </>
                 )}
                 {showCreate && (
-                  <select
-                    value={selectedProblem}
-                    onChange={(e) => setSelectedProblem(Number(e.target.value))}
-                    className="bg-muted/50 rounded-lg px-4 py-2.5 text-sm text-foreground outline-none border border-border focus:border-primary/50 transition-colors"
-                  >
-                    {PROBLEMS.map((p) => (
-                      <option key={p.id} value={p.id}>{p.title} ({p.difficulty})</option>
-                    ))}
-                  </select>
+                  <>
+                    <div>
+                      <label className="text-xs text-muted-foreground mb-1.5 block">Select Topic</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {TOPICS.map((t) => (
+                          <button
+                            key={t.id}
+                            onClick={() => setSelectedTopic(t.id)}
+                            className={`flex items-center gap-2 p-2.5 rounded-lg text-sm text-left transition-all ${
+                              selectedTopic === t.id
+                                ? "bg-primary/15 text-primary border border-primary/30"
+                                : "bg-muted/30 text-muted-foreground hover:bg-muted/50 border border-transparent"
+                            }`}
+                          >
+                            <span>{t.icon}</span>
+                            <span className="font-medium">{t.label}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                      <input
+                        value={roomPassword}
+                        onChange={(e) => setRoomPassword(e.target.value)}
+                        placeholder="Room Password (required)"
+                        type="password"
+                        className="bg-muted/50 rounded-lg pl-10 pr-4 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground border border-border focus:border-primary/50 transition-colors w-full"
+                      />
+                    </div>
+                  </>
                 )}
                 <button
                   onClick={showCreate ? handleCreate : () => handleJoin()}
@@ -177,6 +227,7 @@ export default function RoomsPage() {
           </div>
         ) : rooms.length === 0 ? (
           <div className="text-center py-20 text-muted-foreground">
+            <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-30" />
             <p className="text-lg">No active rooms yet</p>
             <p className="text-sm mt-1">Create one to get started!</p>
           </div>
@@ -184,14 +235,14 @@ export default function RoomsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             <AnimatePresence>
               {rooms.map((room, i) => {
-                const problem = PROBLEMS.find((p) => p.id === room.problem_id);
+                const roomData = room as any;
+                const topicConfig = TOPICS.find((t) => t.id === roomData.topic);
                 return (
                   <motion.div
                     key={room.id}
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: i * 0.08 }}
-                    onClick={() => handleJoin(room.room_code)}
                     className="glass-panel p-5 hover:border-primary/30 transition-all duration-300 cursor-pointer group"
                   >
                     <div className="flex items-start justify-between mb-3">
@@ -199,22 +250,25 @@ export default function RoomsPage() {
                         {room.status === "active" && (
                           <span className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse-glow" />
                         )}
+                        <span className="text-lg">{topicConfig?.icon || "📚"}</span>
                         <span className="text-xs text-muted-foreground uppercase tracking-wider">
-                          {problem?.category || "General"}
+                          {topicConfig?.label || "General"}
                         </span>
                       </div>
-                      <span className={`text-xs font-semibold ${difficultyColor[problem?.difficulty || "Easy"]}`}>
-                        {problem?.difficulty || "Easy"}
+                      <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                        room.status === "active" ? "bg-neon-cyan/15 text-neon-cyan" :
+                        room.status === "finished" ? "bg-muted/50 text-muted-foreground" :
+                        "bg-primary/15 text-primary"
+                      }`}>
+                        {room.status}
                       </span>
                     </div>
                     <h3 className="text-lg font-display font-semibold text-foreground mb-1">
-                      {problem?.title || "Unknown"}
+                      {topicConfig?.label || "Quiz"} Battle
                     </h3>
-                    <p className="text-xs text-muted-foreground mb-3 font-mono">
-                      Code: <span className="text-primary">{room.room_code}</span>
-                      <span className="ml-2 px-2 py-0.5 rounded bg-muted text-xs">
-                        {room.status}
-                      </span>
+                    <p className="text-xs text-muted-foreground mb-3">
+                      Host: <span className="text-foreground">{room.host_name}</span>
+                      <span className="ml-2 font-mono text-primary">{room.room_code}</span>
                     </p>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
