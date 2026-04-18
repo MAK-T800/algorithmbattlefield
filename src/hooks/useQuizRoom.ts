@@ -23,6 +23,8 @@ interface RoomData {
   question_started_at: string | null;
   room_password: string;
   max_participants: number;
+  quiz_mode: "mcq" | "program" | "mixed";
+  time_per_question_sec: number;
 }
 
 interface AnswerRecord {
@@ -178,7 +180,13 @@ export function useQuizRoom(roomCode: string | null) {
   }, [room]);
 
   const submitAnswer = useCallback(
-    async (questionIndex: number, selectedOption: number, isCorrect: boolean, timeTakenMs: number) => {
+    async (
+      questionIndex: number,
+      selectedOption: number,
+      isCorrect: boolean,
+      timeTakenMs: number,
+      payload?: Record<string, unknown>,
+    ) => {
       if (!room || !myParticipant) return;
 
       await supabase.from("room_answers").insert({
@@ -188,7 +196,8 @@ export function useQuizRoom(roomCode: string | null) {
         selected_option: selectedOption,
         is_correct: isCorrect,
         time_taken_ms: timeTakenMs,
-      });
+        ...(payload ? { answer_payload: payload as never } : {}),
+      } as never);
 
       // Update participant score
       const points = isCorrect ? Math.max(10, 100 - Math.floor(timeTakenMs / 1000)) : 0;
