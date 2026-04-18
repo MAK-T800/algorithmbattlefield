@@ -1,17 +1,19 @@
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Users, Zap, Plus, ArrowRight, LogIn, Loader2, Lock, BookOpen } from "lucide-react";
+import { Users, Zap, Plus, ArrowRight, LogIn, Loader2, Lock, BookOpen, Timer, Layers } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { getSessionId, getUsername, setUsername, generateRoomCode } from "@/lib/session";
 import { useRoomsList } from "@/hooks/useRoomsList";
 import { TOPICS } from "@/lib/mcqQuestions";
 
-const difficultyColor: Record<string, string> = {
-  Easy: "text-neon-cyan",
-  Medium: "text-neon-orange",
-  Hard: "text-destructive",
-};
+type QuizMode = "mcq" | "program" | "mixed";
+const MODES: Array<{ id: QuizMode; label: string; desc: string }> = [
+  { id: "mcq", label: "MCQ", desc: "Concept questions" },
+  { id: "program", label: "Program", desc: "Fill-in code blanks" },
+  { id: "mixed", label: "Mixed", desc: "MCQ + Program" },
+];
+const TIMER_OPTIONS = [30, 45, 60];
 
 export default function RoomsPage() {
   const navigate = useNavigate();
@@ -23,6 +25,8 @@ export default function RoomsPage() {
   const [userName, setUserName] = useState(getUsername() || "");
   const [selectedTopic, setSelectedTopic] = useState("dsa");
   const [roomPassword, setRoomPassword] = useState("");
+  const [quizMode, setQuizMode] = useState<QuizMode>("mcq");
+  const [timePerQ, setTimePerQ] = useState<number>(60);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -51,7 +55,9 @@ export default function RoomsPage() {
         problem_id: 1,
         topic: selectedTopic,
         room_password: roomPassword.trim(),
-      })
+        quiz_mode: quizMode,
+        time_per_question_sec: timePerQ,
+      } as never)
       .select()
       .single();
 
