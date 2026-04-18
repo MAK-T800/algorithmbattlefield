@@ -3,14 +3,15 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock, Users, Trophy, Zap, ArrowLeft, Copy, Check, X,
-  SkipForward, StopCircle, Play, Flame, Star, Crown, Medal,
+  SkipForward, StopCircle, Play, Star, Crown, Medal, Layers, Timer,
 } from "lucide-react";
 import { useQuizRoom } from "@/hooks/useQuizRoom";
-import { getTopicByIdOrDefault, type MCQQuestion } from "@/lib/mcqQuestions";
+import { getTopicByIdOrDefault } from "@/lib/mcqQuestions";
+import { buildQuestionList, gradeProgramAnswer, type AnyQuestion, type QuizMode } from "@/lib/quizMode";
 import { getSessionId, getUsername } from "@/lib/session";
 import { useToast } from "@/hooks/use-toast";
-
-const QUESTION_TIME_LIMIT = 120; // 2 min
+import ProgramQuestionCard from "@/components/quiz/ProgramQuestionCard";
+import PostAnswerVisualization from "@/components/quiz/PostAnswerVisualization";
 
 const rankBadge = (rank: number) => {
   if (rank === 1) return { label: "Diamond", color: "text-neon-cyan", icon: Crown, bg: "bg-neon-cyan/10" };
@@ -31,10 +32,21 @@ export default function QuizBattlePage() {
   const sessionId = getSessionId();
   const userName = getUsername() || "Anonymous";
   const topic = useMemo(() => getTopicByIdOrDefault(room?.topic || "dsa"), [room?.topic]);
-  const currentQ: MCQQuestion | null = topic.questions[room?.current_question_index ?? 0] || null;
-  const totalQuestions = topic.questions.length;
+  const quizMode: QuizMode = (room?.quiz_mode as QuizMode) || "mcq";
+  const QUESTION_TIME_LIMIT = room?.time_per_question_sec ?? 60;
+
+  const questionList: AnyQuestion[] = useMemo(
+    () => buildQuestionList(room?.topic || "dsa", quizMode),
+    [room?.topic, quizMode]
+  );
+  const totalQuestions = questionList.length;
+  const currentEntry: AnyQuestion | null =
+    questionList[room?.current_question_index ?? 0] || null;
+  const currentMcq = currentEntry?.kind === "mcq" ? currentEntry.data : null;
+  const currentProgram = currentEntry?.kind === "program" ? currentEntry.data : null;
 
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
+  const [programSelections, setProgramSelections] = useState<Record<number, number>>({});
   const [submitted, setSubmitted] = useState(false);
   const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_LIMIT);
   const [showReveal, setShowReveal] = useState(false);
@@ -45,10 +57,11 @@ export default function QuizBattlePage() {
   // Reset state on question change
   useEffect(() => {
     setSelectedOption(null);
+    setProgramSelections({});
     setSubmitted(false);
     setShowReveal(false);
     setTimeLeft(QUESTION_TIME_LIMIT);
-  }, [questionIndex]);
+  }, [questionIndex, QUESTION_TIME_LIMIT]);
 
   // Check if already answered
   useEffect(() => {
