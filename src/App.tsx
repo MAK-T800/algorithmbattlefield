@@ -5,6 +5,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import ParticleBackground from "@/components/ParticleBackground";
 import Navbar from "@/components/Navbar";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import RoomsPage from "./pages/RoomsPage";
 import ArenaPage from "./pages/ArenaPage";
 import QuizBattlePage from "./pages/QuizBattlePage";
@@ -16,11 +17,12 @@ const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <ParticleBackground />
-      <BrowserRouter>
+    <ThemeProvider>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <ParticleBackground />
+        <BrowserRouter>
         <Navbar />
         <Routes>
           <Route path="/" element={<RoomsPage />} />

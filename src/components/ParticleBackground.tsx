@@ -1,4 +1,5 @@
 import { useRef, useEffect, useCallback } from "react";
+import { useTheme } from "./ThemeProvider";
 
 interface Particle {
   x: number;
@@ -6,48 +7,33 @@ interface Particle {
   vx: number;
   vy: number;
   size: number;
-  color: string;
-  alpha: number;
-  layer: number; // 0 = far, 1 = mid, 2 = near (parallax)
-  trail: { x: number; y: number }[];
+  layer: number;
+  baseAlpha: number;
 }
-
-interface Ripple {
-  x: number;
-  y: number;
-  radius: number;
-  alpha: number;
-}
-
-const COLORS = [
-  "56, 189, 248",   // blue
-  "168, 85, 247",   // purple
-  "34, 211, 238",   // cyan
-  "236, 72, 153",   // pink
-];
 
 export default function ParticleBackground() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const mouseRef = useRef({ x: -10000, y: -10000, px: -10000, py: -10000 });
+  const mouseRef = useRef({ x: -10000, y: -10000 });
   const particlesRef = useRef<Particle[]>([]);
-  const ripplesRef = useRef<Ripple[]>([]);
   const animRef = useRef<number>(0);
+  const { theme } = useTheme();
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
 
   const initParticles = useCallback((w: number, h: number) => {
-    const count = Math.min(Math.floor((w * h) / 9000), 160);
+    // Calmer density — fewer particles
+    const count = Math.min(Math.floor((w * h) / 16000), 90);
     particlesRef.current = Array.from({ length: count }, () => {
       const layer = Math.floor(Math.random() * 3);
-      const speedScale = 0.2 + layer * 0.25;
+      const speed = 0.08 + layer * 0.06;
       return {
         x: Math.random() * w,
         y: Math.random() * h,
-        vx: (Math.random() - 0.5) * speedScale,
-        vy: (Math.random() - 0.5) * speedScale,
-        size: 0.8 + layer * 0.9 + Math.random() * 1.2,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
-        alpha: 0.25 + layer * 0.2 + Math.random() * 0.2,
+        vx: (Math.random() - 0.5) * speed,
+        vy: (Math.random() - 0.5) * speed,
+        size: 0.8 + layer * 0.6 + Math.random() * 0.6,
         layer,
-        trail: [],
+        baseAlpha: 0.2 + layer * 0.15,
       };
     });
   }, []);
@@ -78,8 +64,6 @@ export default function ParticleBackground() {
       initParticles(w, h);
     };
     const onMouse = (e: MouseEvent) => {
-      mouseRef.current.px = mouseRef.current.x;
-      mouseRef.current.py = mouseRef.current.y;
       mouseRef.current.x = e.clientX;
       mouseRef.current.y = e.clientY;
     };
@@ -87,94 +71,80 @@ export default function ParticleBackground() {
       mouseRef.current.x = -10000;
       mouseRef.current.y = -10000;
     };
-    const onClick = (e: MouseEvent) => {
-      ripplesRef.current.push({
-        x: e.clientX,
-        y: e.clientY,
-        radius: 0,
-        alpha: 0.6,
-      });
-    };
 
     window.addEventListener("resize", onResize);
-    window.addEventListener("mousemove", onMouse);
+    window.addEventListener("mousemove", onMouse, { passive: true });
     window.addEventListener("mouseleave", onLeave);
-    window.addEventListener("click", onClick);
 
     const draw = () => {
-      // Soft fade for motion trails
-      ctx.fillStyle = "rgba(8, 10, 22, 0.18)";
-      ctx.fillRect(0, 0, w, h);
+      const isDark = themeRef.current === "dark";
+      ctx.clearRect(0, 0, w, h);
+
+      // Color palette per theme
+      const dotColor = isDark ? "200, 220, 255" : "60, 90, 160";
+      const lineColor = isDark ? "120, 160, 220" : "80, 110, 180";
+      const cursorColor = isDark ? "120, 200, 255" : "80, 130, 220";
 
       const particles = particlesRef.current;
       const mouse = mouseRef.current;
 
       // Update + draw particles
       for (const p of particles) {
-        // Mouse repulsion (parallax-aware)
+        // Very subtle mouse influence (gentle pull, not jittery)
         const dx = mouse.x - p.x;
         const dy = mouse.y - p.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
-        const influence = 180 + p.layer * 40;
+        const influence = 140;
         if (dist < influence && dist > 0) {
-          const force = ((influence - dist) / influence) * (0.04 + p.layer * 0.02);
-          p.vx -= (dx / dist) * force;
-          p.vy -= (dy / dist) * force;
-        }
-
-        // Ripple push
-        for (const r of ripplesRef.current) {
-          const rdx = p.x - r.x;
-          const rdy = p.y - r.y;
-          const rd = Math.sqrt(rdx * rdx + rdy * rdy);
-          if (Math.abs(rd - r.radius) < 30 && rd > 0) {
-            const f = (1 - Math.abs(rd - r.radius) / 30) * 0.8;
-            p.vx += (rdx / rd) * f;
-            p.vy += (rdy / rd) * f;
-          }
+          const force = ((influence - dist) / influence) * 0.008;
+          p.vx += (dx / dist) * force;
+          p.vy += (dy / dist) * force;
         }
 
         p.x += p.vx;
         p.y += p.vy;
-        p.vx *= 0.97;
-        p.vy *= 0.97;
+        // Gentle damping keeps motion calm
+        p.vx *= 0.985;
+        p.vy *= 0.985;
 
-        if (p.x < -20) p.x = w + 20;
-        if (p.x > w + 20) p.x = -20;
-        if (p.y < -20) p.y = h + 20;
-        if (p.y > h + 20) p.y = -20;
-
-        // Trail (only for near layer)
-        if (p.layer === 2) {
-          p.trail.push({ x: p.x, y: p.y });
-          if (p.trail.length > 6) p.trail.shift();
-          for (let i = 0; i < p.trail.length; i++) {
-            const t = p.trail[i];
-            const ta = (i / p.trail.length) * p.alpha * 0.4;
-            ctx.beginPath();
-            ctx.arc(t.x, t.y, p.size * (i / p.trail.length), 0, Math.PI * 2);
-            ctx.fillStyle = `rgba(${p.color}, ${ta})`;
-            ctx.fill();
-          }
+        // Drift back toward base micro-motion if too slow (keeps flow alive)
+        const minSpeed = 0.02 + p.layer * 0.015;
+        const sp = Math.hypot(p.vx, p.vy);
+        if (sp < minSpeed) {
+          const a = Math.random() * Math.PI * 2;
+          p.vx += Math.cos(a) * 0.01;
+          p.vy += Math.sin(a) * 0.01;
         }
 
-        // Glow
-        const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 6);
-        glow.addColorStop(0, `rgba(${p.color}, ${p.alpha})`);
-        glow.addColorStop(1, `rgba(${p.color}, 0)`);
-        ctx.fillStyle = glow;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.size * 6, 0, Math.PI * 2);
-        ctx.fill();
+        // Wrap
+        if (p.x < -10) p.x = w + 10;
+        if (p.x > w + 10) p.x = -10;
+        if (p.y < -10) p.y = h + 10;
+        if (p.y > h + 10) p.y = -10;
 
-        // Core
+        // Draw dot (no aggressive glow)
+        const a = isDark ? p.baseAlpha : p.baseAlpha * 0.55;
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-        ctx.fillStyle = `rgba(${p.color}, ${Math.min(1, p.alpha + 0.4)})`;
+        ctx.fillStyle = `rgba(${dotColor}, ${a})`;
         ctx.fill();
+
+        // Soft glow only in dark mode and only near layer
+        if (isDark && p.layer === 2) {
+          const g = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size * 4);
+          g.addColorStop(0, `rgba(${dotColor}, ${a * 0.6})`);
+          g.addColorStop(1, `rgba(${dotColor}, 0)`);
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, p.size * 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
       }
 
-      // Connections (only between similar layers for depth)
+      // Connections (thin, subtle)
+      const maxDist = 120;
+      const lineMaxAlpha = isDark ? 0.18 : 0.08;
+      ctx.lineWidth = 0.5;
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const a = particles[i];
@@ -183,55 +153,34 @@ export default function ParticleBackground() {
           const dx = a.x - b.x;
           const dy = a.y - b.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          const maxDist = 130 + a.layer * 20;
           if (dist < maxDist) {
-            const alpha = ((maxDist - dist) / maxDist) * 0.18;
-            const grad = ctx.createLinearGradient(a.x, a.y, b.x, b.y);
-            grad.addColorStop(0, `rgba(${a.color}, ${alpha})`);
-            grad.addColorStop(1, `rgba(${b.color}, ${alpha})`);
+            const alpha = ((maxDist - dist) / maxDist) * lineMaxAlpha;
+            ctx.strokeStyle = `rgba(${lineColor}, ${alpha})`;
             ctx.beginPath();
             ctx.moveTo(a.x, a.y);
             ctx.lineTo(b.x, b.y);
-            ctx.strokeStyle = grad;
-            ctx.lineWidth = 0.6;
             ctx.stroke();
           }
         }
       }
 
-      // Cursor connection lines
+      // Subtle cursor connection
       if (mouse.x > -1000) {
         for (const p of particles) {
           const dx = mouse.x - p.x;
           const dy = mouse.y - p.y;
           const dist = Math.sqrt(dx * dx + dy * dy);
-          if (dist < 160) {
-            const alpha = ((160 - dist) / 160) * 0.35;
+          if (dist < 130) {
+            const alpha = ((130 - dist) / 130) * (isDark ? 0.25 : 0.12);
+            ctx.strokeStyle = `rgba(${cursorColor}, ${alpha})`;
+            ctx.lineWidth = 0.6;
             ctx.beginPath();
             ctx.moveTo(mouse.x, mouse.y);
             ctx.lineTo(p.x, p.y);
-            ctx.strokeStyle = `rgba(${p.color}, ${alpha})`;
-            ctx.lineWidth = 0.7;
             ctx.stroke();
           }
         }
       }
-
-      // Draw + update ripples
-      ripplesRef.current = ripplesRef.current.filter((r) => {
-        r.radius += 4;
-        r.alpha *= 0.96;
-        const grad = ctx.createRadialGradient(r.x, r.y, Math.max(0, r.radius - 20), r.x, r.y, r.radius + 20);
-        grad.addColorStop(0, `rgba(56, 189, 248, 0)`);
-        grad.addColorStop(0.5, `rgba(168, 85, 247, ${r.alpha})`);
-        grad.addColorStop(1, `rgba(56, 189, 248, 0)`);
-        ctx.strokeStyle = grad;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.arc(r.x, r.y, r.radius, 0, Math.PI * 2);
-        ctx.stroke();
-        return r.alpha > 0.02 && r.radius < 600;
-      });
 
       animRef.current = requestAnimationFrame(draw);
     };
@@ -242,7 +191,6 @@ export default function ParticleBackground() {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("mousemove", onMouse);
       window.removeEventListener("mouseleave", onLeave);
-      window.removeEventListener("click", onClick);
     };
   }, [initParticles]);
 
@@ -251,6 +199,7 @@ export default function ParticleBackground() {
       ref={canvasRef}
       className="fixed inset-0 pointer-events-none"
       style={{ zIndex: 0 }}
+      aria-hidden="true"
     />
   );
 }
