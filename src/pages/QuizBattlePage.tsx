@@ -3,7 +3,8 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock, Users, Trophy, Zap, ArrowLeft, Copy, Check, X,
-  SkipForward, StopCircle, Play, Star, Crown, Medal, Layers, Timer, Trash2,
+  SkipForward, SkipBack, StopCircle, Play, Pause, RotateCcw, Plus, Minus,
+  Star, Crown, Medal, Layers, Timer, Trash2,
 } from "lucide-react";
 import { useQuizRoom } from "@/hooks/useQuizRoom";
 import { getTopicByIdOrDefault } from "@/lib/mcqQuestions";
@@ -27,7 +28,10 @@ export default function QuizBattlePage() {
   const { toast } = useToast();
   const {
     room, participants, myParticipant, answers, reactions,
-    loading, error, roomDeleted, startQuiz, nextQuestion, endQuiz, submitAnswer, sendReaction, leaveRoom, deleteRoom,
+    loading, error, roomDeleted,
+    startQuiz, nextQuestion, previousQuestion, endQuiz,
+    adjustTime, resetTimer, pauseTimer, resumeTimer,
+    submitAnswer, sendReaction, leaveRoom, deleteRoom,
   } = useQuizRoom(roomCode || null);
 
   const sessionId = getSessionId();
@@ -94,20 +98,22 @@ export default function QuizBattlePage() {
     }
   }, [answers, myParticipant, questionIndex]);
 
-  // Timer
+  // Timer — synced via room.question_started_at + pause state. NEVER auto-advances.
+  const isPaused = !!room?.timer_paused_at;
   useEffect(() => {
     if (!room?.quiz_started || room?.status !== "active" || !room?.question_started_at) return;
     const startedAt = new Date(room.question_started_at).getTime();
-    const interval = setInterval(() => {
-      const elapsed = Math.floor((Date.now() - startedAt) / 1000);
-      const remaining = Math.max(0, QUESTION_TIME_LIMIT - elapsed);
-      setTimeLeft(remaining);
-      if (remaining === 0) {
-        setShowReveal(true);
-      }
-    }, 250);
+    const pauseOffset = room.timer_pause_offset_ms || 0;
+    const computeRemaining = () => {
+      const now = room.timer_paused_at ? new Date(room.timer_paused_at).getTime() : Date.now();
+      const elapsed = Math.floor((now - startedAt - pauseOffset) / 1000);
+      return Math.max(0, QUESTION_TIME_LIMIT - elapsed);
+    };
+    setTimeLeft(computeRemaining());
+    if (room.timer_paused_at) return; // freeze countdown when paused
+    const interval = setInterval(() => setTimeLeft(computeRemaining()), 250);
     return () => clearInterval(interval);
-  }, [room?.quiz_started, room?.status, room?.question_started_at]);
+  }, [room?.quiz_started, room?.status, room?.question_started_at, room?.timer_paused_at, room?.timer_pause_offset_ms, QUESTION_TIME_LIMIT]);
 
   // Compute leaderboard
   const leaderboard = useMemo(() => {
@@ -432,6 +438,7 @@ export default function QuizBattlePage() {
                         const isSelected = selectedOption === i;
                         const isCorrect = currentMcq.correctIndex === i;
                         const showResult = submitted || showReveal;
+                        const locked = submitted || showReveal || timeLeft === 0;
                         let optionClass = "glass-panel p-4 cursor-pointer transition-all duration-300 hover:border-primary/40 text-left";
 
                         if (showResult) {
@@ -440,15 +447,17 @@ export default function QuizBattlePage() {
                           else optionClass = "glass-panel p-4 opacity-50 text-left";
                         } else if (isSelected) {
                           optionClass = "glass-panel p-4 border-2 border-primary/60 bg-primary/10 text-left neon-glow-blue";
+                        } else if (locked) {
+                          optionClass = "glass-panel p-4 opacity-60 text-left cursor-not-allowed";
                         }
 
                         return (
                           <motion.button
                             key={i}
-                            whileHover={!showResult ? { scale: 1.02 } : {}}
-                            whileTap={!showResult ? { scale: 0.98 } : {}}
-                            onClick={() => !submitted && !showReveal && setSelectedOption(i)}
-                            disabled={submitted || showReveal}
+                            whileHover={!locked ? { scale: 1.02 } : {}}
+                            whileTap={!locked ? { scale: 0.98 } : {}}
+                            onClick={() => !locked && setSelectedOption(i)}
+                            disabled={locked}
                             className={optionClass}
                           >
                             <div className="flex items-start gap-3">
@@ -483,10 +492,10 @@ export default function QuizBattlePage() {
                     question={currentProgram}
                     selections={programSelections}
                     onSelect={(blankId, idx) =>
-                      !submitted && !showReveal &&
+                      !submitted && !showReveal && timeLeft > 0 &&
                       setProgramSelections((prev) => ({ ...prev, [blankId]: idx }))
                     }
-                    locked={submitted || showReveal}
+                    locked={submitted || showReveal || timeLeft === 0}
                     showResult={submitted || showReveal}
                   />
                 )}
@@ -503,14 +512,22 @@ export default function QuizBattlePage() {
                 )}
 
                 {/* Submit / Status */}
-                <div className="mt-6 flex items-center justify-between">
-                  {!submitted && !showReveal ? (
+                <div className="mt-6 flex items-center justify-between flex-wrap gap-3">
+                  {!submitted ? (
                     (() => {
-                      const disabled = currentMcq
+                      const timeUp = timeLeft === 0;
+                      const disabled = timeUp || (currentMcq
                         ? selectedOption === null
                         : currentProgram
                         ? Object.keys(programSelections).length < currentProgram.blanks.length
-                        : true;
+                        : true);
+                      if (timeUp) {
+                        return (
+                          <span className="text-sm text-muted-foreground italic flex items-center gap-2">
+                            <Clock className="w-4 h-4" /> Time's up — waiting for instructor to proceed…
+                          </span>
+                        );
+                      }
                       return (
                         <button
                           onClick={handleSubmit}
@@ -522,20 +539,20 @@ export default function QuizBattlePage() {
                       );
                     })()
                   ) : (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-wrap">
                       {(() => {
-                        if (!submitted) return <span className="text-muted-foreground">Time's up!</span>;
                         const correct = currentMcq
                           ? selectedOption === currentMcq.correctIndex
                           : currentProgram
                           ? gradeProgramAnswer(currentProgram, programSelections).isCorrect
                           : false;
                         return correct ? (
-                          <span className="text-neon-cyan font-semibold flex items-center gap-1"><Check className="w-4 h-4" /> Correct!</span>
+                          <span className="text-neon-cyan font-semibold flex items-center gap-1"><Check className="w-4 h-4" /> Submitted · Correct!</span>
                         ) : (
-                          <span className="text-destructive font-semibold flex items-center gap-1"><X className="w-4 h-4" /> Wrong</span>
+                          <span className="text-destructive font-semibold flex items-center gap-1"><X className="w-4 h-4" /> Submitted · Wrong</span>
                         );
                       })()}
+                      <span className="text-xs text-muted-foreground italic">Waiting for instructor to proceed…</span>
                       {fastestCorrect && (
                         <span className="text-xs text-neon-orange ml-3 flex items-center gap-1">
                           <Zap className="w-3 h-3" /> Fastest: {fastestCorrect}
@@ -571,19 +588,71 @@ export default function QuizBattlePage() {
             </div>
           </div>
 
-          {/* Teacher controls */}
+          {/* Teacher / Instructor Control Panel */}
           {isHost && (
-            <div className="glass-panel p-3 flex items-center gap-3">
-              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Teacher</span>
-              <button onClick={nextQuestion} disabled={questionIndex >= totalQuestions - 1} className="flex items-center gap-1 px-4 py-2 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors text-sm font-semibold disabled:opacity-30">
-                <SkipForward className="w-3.5 h-3.5" /> Next
-              </button>
-              <button onClick={endQuiz} className="flex items-center gap-1 px-4 py-2 rounded-lg bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors text-sm font-semibold">
-                <StopCircle className="w-3.5 h-3.5" /> End Quiz
-              </button>
-              <span className="text-xs text-muted-foreground ml-auto">
-                {totalAnswered}/{participants.length} answered
-              </span>
+            <div className="glass-panel-strong p-3 space-y-2 border border-primary/20">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Instructor Panel</span>
+                  <span className="text-xs text-muted-foreground">
+                    Q{questionIndex + 1}/{totalQuestions} · {totalAnswered}/{participants.length} answered
+                  </span>
+                </div>
+                {isPaused && (
+                  <span className="text-[10px] uppercase tracking-widest text-neon-orange font-bold animate-pulse">
+                    ⏸ Paused
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={previousQuestion}
+                  disabled={questionIndex === 0}
+                  title="Previous question"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted/40 text-foreground hover:bg-muted/60 transition-colors text-xs font-semibold disabled:opacity-30"
+                >
+                  <SkipBack className="w-3.5 h-3.5" /> Prev
+                </button>
+                <button
+                  onClick={nextQuestion}
+                  disabled={questionIndex >= totalQuestions - 1}
+                  title="Next question (students sync instantly)"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors text-xs font-semibold disabled:opacity-30 neon-glow-blue"
+                >
+                  <SkipForward className="w-3.5 h-3.5" /> Next Question
+                </button>
+
+                <span className="w-px h-6 bg-border mx-1" />
+
+                <button onClick={() => adjustTime(10)} title="+10 seconds" className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-neon-cyan/15 text-neon-cyan hover:bg-neon-cyan/25 transition-colors text-xs font-semibold">
+                  <Plus className="w-3 h-3" />10s
+                </button>
+                <button onClick={() => adjustTime(20)} title="+20 seconds" className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-neon-cyan/15 text-neon-cyan hover:bg-neon-cyan/25 transition-colors text-xs font-semibold">
+                  <Plus className="w-3 h-3" />20s
+                </button>
+                <button onClick={() => adjustTime(-10)} title="-10 seconds" className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-neon-orange/15 text-neon-orange hover:bg-neon-orange/25 transition-colors text-xs font-semibold">
+                  <Minus className="w-3 h-3" />10s
+                </button>
+                {isPaused ? (
+                  <button onClick={resumeTimer} title="Resume timer" className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 transition-colors text-xs font-semibold">
+                    <Play className="w-3.5 h-3.5" /> Resume
+                  </button>
+                ) : (
+                  <button onClick={pauseTimer} title="Pause timer" className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neon-orange/15 text-neon-orange hover:bg-neon-orange/25 transition-colors text-xs font-semibold">
+                    <Pause className="w-3.5 h-3.5" /> Pause
+                  </button>
+                )}
+                <button onClick={resetTimer} title="Reset timer" className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted/40 text-foreground hover:bg-muted/60 transition-colors text-xs font-semibold">
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset
+                </button>
+
+                <span className="w-px h-6 bg-border mx-1" />
+
+                <button onClick={endQuiz} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors text-xs font-semibold ml-auto">
+                  <StopCircle className="w-3.5 h-3.5" /> End Quiz
+                </button>
+              </div>
             </div>
           )}
         </div>
