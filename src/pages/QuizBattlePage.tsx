@@ -588,19 +588,71 @@ export default function QuizBattlePage() {
             </div>
           </div>
 
-          {/* Teacher controls */}
+          {/* Teacher / Instructor Control Panel */}
           {isHost && (
-            <div className="glass-panel p-3 flex items-center gap-3">
-              <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider">Teacher</span>
-              <button onClick={nextQuestion} disabled={questionIndex >= totalQuestions - 1} className="flex items-center gap-1 px-4 py-2 rounded-lg bg-primary/15 text-primary hover:bg-primary/25 transition-colors text-sm font-semibold disabled:opacity-30">
-                <SkipForward className="w-3.5 h-3.5" /> Next
-              </button>
-              <button onClick={endQuiz} className="flex items-center gap-1 px-4 py-2 rounded-lg bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors text-sm font-semibold">
-                <StopCircle className="w-3.5 h-3.5" /> End Quiz
-              </button>
-              <span className="text-xs text-muted-foreground ml-auto">
-                {totalAnswered}/{participants.length} answered
-              </span>
+            <div className="glass-panel-strong p-3 space-y-2 border border-primary/20">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] uppercase tracking-widest text-primary font-bold">Instructor Panel</span>
+                  <span className="text-xs text-muted-foreground">
+                    Q{questionIndex + 1}/{totalQuestions} · {totalAnswered}/{participants.length} answered
+                  </span>
+                </div>
+                {isPaused && (
+                  <span className="text-[10px] uppercase tracking-widest text-neon-orange font-bold animate-pulse">
+                    ⏸ Paused
+                  </span>
+                )}
+              </div>
+
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  onClick={previousQuestion}
+                  disabled={questionIndex === 0}
+                  title="Previous question"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted/40 text-foreground hover:bg-muted/60 transition-colors text-xs font-semibold disabled:opacity-30"
+                >
+                  <SkipBack className="w-3.5 h-3.5" /> Prev
+                </button>
+                <button
+                  onClick={nextQuestion}
+                  disabled={questionIndex >= totalQuestions - 1}
+                  title="Next question (students sync instantly)"
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-primary/20 text-primary hover:bg-primary/30 transition-colors text-xs font-semibold disabled:opacity-30 neon-glow-blue"
+                >
+                  <SkipForward className="w-3.5 h-3.5" /> Next Question
+                </button>
+
+                <span className="w-px h-6 bg-border mx-1" />
+
+                <button onClick={() => adjustTime(10)} title="+10 seconds" className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-neon-cyan/15 text-neon-cyan hover:bg-neon-cyan/25 transition-colors text-xs font-semibold">
+                  <Plus className="w-3 h-3" />10s
+                </button>
+                <button onClick={() => adjustTime(20)} title="+20 seconds" className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-neon-cyan/15 text-neon-cyan hover:bg-neon-cyan/25 transition-colors text-xs font-semibold">
+                  <Plus className="w-3 h-3" />20s
+                </button>
+                <button onClick={() => adjustTime(-10)} title="-10 seconds" className="flex items-center gap-0.5 px-2 py-1.5 rounded-lg bg-neon-orange/15 text-neon-orange hover:bg-neon-orange/25 transition-colors text-xs font-semibold">
+                  <Minus className="w-3 h-3" />10s
+                </button>
+                {isPaused ? (
+                  <button onClick={resumeTimer} title="Resume timer" className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neon-cyan/20 text-neon-cyan hover:bg-neon-cyan/30 transition-colors text-xs font-semibold">
+                    <Play className="w-3.5 h-3.5" /> Resume
+                  </button>
+                ) : (
+                  <button onClick={pauseTimer} title="Pause timer" className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-neon-orange/15 text-neon-orange hover:bg-neon-orange/25 transition-colors text-xs font-semibold">
+                    <Pause className="w-3.5 h-3.5" /> Pause
+                  </button>
+                )}
+                <button onClick={resetTimer} title="Reset timer" className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-muted/40 text-foreground hover:bg-muted/60 transition-colors text-xs font-semibold">
+                  <RotateCcw className="w-3.5 h-3.5" /> Reset
+                </button>
+
+                <span className="w-px h-6 bg-border mx-1" />
+
+                <button onClick={endQuiz} className="flex items-center gap-1 px-3 py-1.5 rounded-lg bg-destructive/15 text-destructive hover:bg-destructive/25 transition-colors text-xs font-semibold ml-auto">
+                  <StopCircle className="w-3.5 h-3.5" /> End Quiz
+                </button>
+              </div>
             </div>
           )}
         </div>
