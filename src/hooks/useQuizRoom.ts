@@ -25,6 +25,8 @@ interface RoomData {
   max_participants: number;
   quiz_mode: "mcq" | "program" | "mixed";
   time_per_question_sec: number;
+  timer_paused_at: string | null;
+  timer_pause_offset_ms: number;
 }
 
 interface AnswerRecord {
