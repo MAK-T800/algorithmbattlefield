@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Clock, Users, Trophy, Zap, ArrowLeft, Copy, Check, X,
-  SkipForward, StopCircle, Play, Star, Crown, Medal, Layers, Timer,
+  SkipForward, StopCircle, Play, Star, Crown, Medal, Layers, Timer, Trash2,
 } from "lucide-react";
 import { useQuizRoom } from "@/hooks/useQuizRoom";
 import { getTopicByIdOrDefault } from "@/lib/mcqQuestions";
