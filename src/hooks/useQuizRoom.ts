@@ -233,6 +233,14 @@ export function useQuizRoom(roomCode: string | null) {
     await supabase.from("room_participants").delete().eq("id", myParticipant.id);
   }, [myParticipant]);
 
+  const deleteRoom = useCallback(async () => {
+    if (!room) return;
+    await supabase.from("room_answers").delete().eq("room_id", room.id);
+    await supabase.from("submissions").delete().eq("room_id", room.id);
+    await supabase.from("room_participants").delete().eq("room_id", room.id);
+    await supabase.from("rooms").delete().eq("id", room.id);
+  }, [room]);
+
   return {
     room,
     participants,
@@ -241,12 +249,14 @@ export function useQuizRoom(roomCode: string | null) {
     reactions,
     loading,
     error,
+    roomDeleted,
     startQuiz,
     nextQuestion,
     endQuiz,
     submitAnswer,
     sendReaction,
     leaveRoom,
+    deleteRoom,
     refetch: fetchRoom,
   };
 }
