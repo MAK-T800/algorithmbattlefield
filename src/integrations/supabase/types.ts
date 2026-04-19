@@ -128,6 +128,8 @@ export type Database = {
           started_at: string | null
           status: string
           time_per_question_sec: number
+          timer_pause_offset_ms: number
+          timer_paused_at: string | null
           topic: string
         }
         Insert: {
@@ -145,6 +147,8 @@ export type Database = {
           started_at?: string | null
           status?: string
           time_per_question_sec?: number
+          timer_pause_offset_ms?: number
+          timer_paused_at?: string | null
           topic?: string
         }
         Update: {
@@ -162,6 +166,8 @@ export type Database = {
           started_at?: string | null
           status?: string
           time_per_question_sec?: number
+          timer_pause_offset_ms?: number
+          timer_paused_at?: string | null
           topic?: string
         }
         Relationships: []
