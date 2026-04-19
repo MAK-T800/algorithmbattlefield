@@ -492,10 +492,10 @@ export default function QuizBattlePage() {
                     question={currentProgram}
                     selections={programSelections}
                     onSelect={(blankId, idx) =>
-                      !submitted && !showReveal &&
+                      !submitted && !showReveal && timeLeft > 0 &&
                       setProgramSelections((prev) => ({ ...prev, [blankId]: idx }))
                     }
-                    locked={submitted || showReveal}
+                    locked={submitted || showReveal || timeLeft === 0}
                     showResult={submitted || showReveal}
                   />
                 )}
