@@ -184,19 +184,19 @@ void dijkstra(int src) {
 function CodeBlock({ code, onChange }: { code: string; onChange: (val: string) => void | React.Dispatch<React.SetStateAction<string>> }) {
   return (
     <div className="flex flex-col h-full">
-      <div className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 mb-2 px-1 flex items-center gap-2">
-        <div className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse" />
+      <div className="text-[9px] md:text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 mb-2 px-1 flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
         Live Implementation Editor
       </div>
       <div className="relative group flex-1">
         <textarea
           value={code}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full h-full glass-panel p-4 font-mono text-sm leading-relaxed text-primary overflow-x-auto whitespace-pre outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none scrollbar-hide"
+          className="w-full h-full glass-panel p-2 md:p-4 font-mono text-xs md:text-sm leading-relaxed text-primary overflow-x-auto whitespace-pre outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none scrollbar-hide"
           spellCheck={false}
         />
         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-          <span className="text-[9px] bg-primary/20 text-primary px-2 py-1 rounded">Editable</span>
+          <span className="text-[8px] md:text-[9px] bg-primary/20 text-primary px-2 py-1 rounded">Editable</span>
         </div>
       </div>
     </div>
@@ -1067,8 +1067,8 @@ export default function VisualizePage() {
   const renderSortingViz = () => {
     if (!currentData) return null;
     return (
-      <div className="flex flex-col items-center gap-6">
-        <div className="flex items-end gap-1 h-64 px-4">
+      <div className="flex flex-col items-center gap-3 md:gap-6 w-full">
+        <div className="flex items-end gap-0.5 md:gap-1 h-40 md:h-64 w-full px-2 md:px-4">
           {currentData.array.map((val, i) => {
             const isComparing = currentData.comparing.includes(i);
             const isSwapping = currentData.swapping.includes(i);
@@ -1082,49 +1082,49 @@ export default function VisualizePage() {
                 key={i}
                 layout
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
-                className={`rounded-t-md ${bg} transition-colors duration-200 relative flex-1 min-w-[24px] max-w-[48px]`}
+                className={`rounded-t-md ${bg} transition-colors duration-200 relative flex-1 min-w-[16px] md:min-w-[24px] max-w-[32px] md:max-w-[48px]`}
                 style={{ height: `${(val / maxVal) * 100}%`, boxShadow: isComparing || isSwapping ? "0 0 15px hsl(var(--primary) / 0.5)" : "none" }}
               >
-                <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-mono text-foreground">{val}</span>
+                <span className="absolute -top-4 md:-top-5 left-1/2 -translate-x-1/2 text-[10px] md:text-xs font-mono text-foreground">{val}</span>
               </motion.div>
             );
           })}
         </div>
         {/* Controls */}
-        <div className="flex items-center gap-3">
-          <button onClick={() => { setCurrentStep(0); setPlaying(false); }} className="glass-panel p-2 hover:bg-muted/50 transition-colors"><RotateCcw className="w-4 h-4 text-foreground" /></button>
-          <button onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))} className="glass-panel p-2 hover:bg-muted/50 transition-colors"><SkipBack className="w-4 h-4 text-foreground" /></button>
-          <button onClick={() => setPlaying(!playing)} className="glass-panel p-3 hover:bg-primary/10 transition-colors neon-glow-blue">
-            {playing ? <Pause className="w-5 h-5 text-primary" /> : <Play className="w-5 h-5 text-primary" />}
+        <div className="flex flex-wrap items-center justify-center gap-1 md:gap-3">
+          <button onClick={() => { setCurrentStep(0); setPlaying(false); }} className="glass-panel p-1.5 md:p-2 hover:bg-muted/50 transition-colors"><RotateCcw className="w-3 h-3 md:w-4 md:h-4 text-foreground" /></button>
+          <button onClick={() => setCurrentStep(prev => Math.max(0, prev - 1))} className="glass-panel p-1.5 md:p-2 hover:bg-muted/50 transition-colors"><SkipBack className="w-3 h-3 md:w-4 md:h-4 text-foreground" /></button>
+          <button onClick={() => setPlaying(!playing)} className="glass-panel p-2 md:p-3 hover:bg-primary/10 transition-colors neon-glow-blue">
+            {playing ? <Pause className="w-4 h-4 md:w-5 md:h-5 text-primary" /> : <Play className="w-4 h-4 md:w-5 md:h-5 text-primary" />}
           </button>
-          <button onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))} className="glass-panel p-2 hover:bg-muted/50 transition-colors"><SkipForward className="w-4 h-4 text-foreground" /></button>
-          <div className="flex items-center gap-2 ml-4">
-            <Gauge className="w-4 h-4 text-muted-foreground" />
-            <input type="range" min={50} max={1000} step={50} value={1050 - speed} onChange={e => setSpeed(1050 - Number(e.target.value))} className="w-24 accent-primary" />
+          <button onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))} className="glass-panel p-1.5 md:p-2 hover:bg-muted/50 transition-colors"><SkipForward className="w-3 h-3 md:w-4 md:h-4 text-foreground" /></button>
+          <div className="flex items-center gap-1 md:gap-2 w-full sm:w-auto justify-center sm:justify-start ml-0 sm:ml-4 order-last sm:order-none sm:basis-auto basis-full">
+            <Gauge className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground flex-shrink-0" />
+            <input type="range" min={50} max={1000} step={50} value={1050 - speed} onChange={e => setSpeed(1050 - Number(e.target.value))} className="w-20 md:w-24 accent-primary flex-1 md:flex-none" />
           </div>
         </div>
-        <div className="text-xs text-muted-foreground">
+        <div className="text-[11px] md:text-xs text-muted-foreground">
           Step {currentStep + 1} / {steps.length}
         </div>
         {/* Legend */}
-        <div className="flex gap-4 text-xs">
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-primary" /> Comparing</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive" /> Swapping</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-secondary" /> Sorted</span>
+        <div className="flex gap-2 md:gap-4 text-[10px] md:text-xs flex-wrap justify-center">
+          <span className="flex items-center gap-1"><span className="w-2 h-2 md:w-3 md:h-3 rounded bg-primary" /> Comparing</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 md:w-3 md:h-3 rounded bg-destructive" /> Swapping</span>
+          <span className="flex items-center gap-1"><span className="w-2 h-2 md:w-3 md:h-3 rounded bg-secondary" /> Sorted</span>
         </div>
       </div>
     );
   };
 
   return (
-    <div className="min-h-screen pt-24 px-4 pb-8 relative z-10">
+    <div className="min-h-screen pt-20 md:pt-24 px-3 md:px-4 pb-8 relative z-10">
       <div className="max-w-6xl mx-auto">
-        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-3xl font-display font-bold text-foreground mb-6">
+        <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="text-2xl md:text-3xl font-display font-bold text-foreground mb-4 md:mb-6">
           Concept <span className="text-primary neon-text-blue">Visualizer</span>
         </motion.h1>
 
         {/* Category tabs */}
-        <div className="flex gap-2 mb-6 overflow-x-auto scrollbar-hide">
+        <div className="flex gap-1 md:gap-2 mb-4 md:mb-6 overflow-x-auto scrollbar-hide">
           {CATEGORIES.map(cat => (
             <button
               key={cat.key}
@@ -1136,7 +1136,7 @@ export default function VisualizePage() {
                   setEditableCode(ALGO_CODE[cat.key === "linkedlist" ? "LinkedList" : cat.key === "stack" ? "Stack" : cat.key === "queue" ? "Queue" : cat.key === "tree" ? "Tree" : "Graph"]);
                 }
               }}
-              className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${category === cat.key ? "bg-primary/15 text-primary neon-glow-blue" : "glass-panel text-muted-foreground hover:text-foreground"}`}
+              className={`px-2 md:px-4 py-1.5 md:py-2 rounded-lg text-xs md:text-sm font-semibold whitespace-nowrap transition-all ${category === cat.key ? "bg-primary/15 text-primary neon-glow-blue" : "glass-panel text-muted-foreground hover:text-foreground"}`}
             >
               {cat.label}
             </button>
@@ -1145,12 +1145,12 @@ export default function VisualizePage() {
 
         {/* Algorithm selector for sorting */}
         {category === "sorting" && (
-          <div className="flex gap-2 mb-6 flex-wrap">
+          <div className="flex gap-1 md:gap-2 mb-4 md:mb-6 flex-wrap">
             {CATEGORIES[0].algorithms.map(algo => (
               <button
                 key={algo}
                 onClick={() => { setSelectedAlgo(algo); }}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${selectedAlgo === algo ? "bg-secondary/20 text-secondary" : "text-muted-foreground hover:text-foreground"}`}
+                className={`px-2 md:px-3 py-1 md:py-1.5 rounded-md text-[10px] md:text-xs font-semibold transition-all ${selectedAlgo === algo ? "bg-secondary/20 text-secondary" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {algo}
               </button>
@@ -1159,12 +1159,12 @@ export default function VisualizePage() {
         )}
 
         {category === "graph" && (
-          <div className="flex gap-2 mb-6 flex-wrap">
+          <div className="flex gap-1 md:gap-2 mb-4 md:mb-6 flex-wrap">
             {CATEGORIES[5].algorithms.map(algo => (
               <button
                 key={algo}
                 onClick={() => setSelectedGraphAlgo(algo)}
-                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${selectedGraphAlgo === algo ? "bg-secondary/20 text-secondary" : "text-muted-foreground hover:text-foreground"}`}
+                className={`px-2 md:px-3 py-1 md:py-1.5 rounded-md text-[10px] md:text-xs font-semibold transition-all ${selectedGraphAlgo === algo ? "bg-secondary/20 text-secondary" : "text-muted-foreground hover:text-foreground"}`}
               >
                 {algo}
               </button>
@@ -1173,50 +1173,51 @@ export default function VisualizePage() {
         )}
 
         {/* IDE Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-16rem)] min-h-[600px]">
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
           {/* Left: Editor */}
-          <div className="lg:col-span-5 flex flex-col h-full overflow-hidden">
+          <div className="lg:col-span-5 flex flex-col min-h-[500px] md:min-h-[600px] overflow-hidden">
             <CodeBlock code={editableCode} onChange={setEditableCode} />
-            <div className="mt-4 flex gap-2">
+            <div className="mt-3 md:mt-4 flex gap-2">
               <button 
                 onClick={category === "sorting" ? generateArray : triggerSync} 
-                className="flex-1 glass-panel py-3 rounded-xl text-xs font-bold text-primary hover:bg-primary/10 transition-all flex items-center justify-center gap-2 border-primary/20"
+                className="flex-1 glass-panel py-2 md:py-3 rounded-xl text-xs md:text-sm font-bold text-primary hover:bg-primary/10 transition-all flex items-center justify-center gap-2 border-primary/20"
               >
-                <RotateCcw className="w-4 h-4" /> 
-                {category === "sorting" ? "Sync & Execute Sort" : "Sync Data & Rebuild"}
+                <RotateCcw className="w-3 h-3 md:w-4 md:h-4" /> 
+                <span className="hidden sm:inline">{category === "sorting" ? "Sync & Execute Sort" : "Sync Data & Rebuild"}</span>
+                <span className="sm:hidden">{category === "sorting" ? "Execute" : "Rebuild"}</span>
               </button>
             </div>
           </div>
 
           {/* Right: Output + Visualization */}
-          <div className="lg:col-span-7 flex flex-col gap-4 h-full">
+          <div className="lg:col-span-7 flex flex-col gap-3 md:gap-4 min-h-[500px] md:min-h-[600px]">
             {/* Output Screen */}
-            <div className="glass-panel-strong p-4">
-              <div className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 mb-2 flex items-center gap-2">
+            <div className="glass-panel-strong p-3 md:p-4 flex-shrink-0">
+              <div className="text-[9px] md:text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 mb-2 flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                 Console Output
               </div>
-              <div className="font-mono text-sm text-primary neon-text-blue min-h-[1.5rem] whitespace-pre-line leading-relaxed">
+              <div className="font-mono text-xs md:text-sm text-primary neon-text-blue min-h-[1.5rem] whitespace-pre-line leading-relaxed max-h-[120px] md:max-h-none overflow-y-auto">
                 <div className="flex items-center gap-2 mb-2 border-b border-primary/10 pb-2">
                   <span className="opacity-50">{">"}</span>
                 <span className="font-bold">{stepLabel}</span>
                 </div>
                 {consoleLabel}
                 {(category === "linkedlist" || category === "stack" || category === "queue" || category === "graph") && (
-                  <div className="mt-4 flex flex-col gap-2">
-                    <div className="flex gap-2">
+                  <div className="mt-3 md:mt-4 flex flex-col gap-2">
+                    <div className="flex flex-col sm:flex-row gap-2">
                       <input
                         value={consoleInput}
                         onChange={(e) => setConsoleInput(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitConsoleCommand(); } }}
                         placeholder={category === "linkedlist" ? "insert 10 or delete 10" : category === "stack" ? "push 10 or pop" : category === "queue" ? "enqueue 10 or dequeue" : "start A or goal F"}
-                        className="flex-1 rounded-xl border border-primary/20 bg-card/40 px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                        className="flex-1 rounded-xl border border-primary/20 bg-card/40 px-2 md:px-3 py-2 text-xs md:text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
                       />
-                      <button onClick={submitConsoleCommand} className="rounded-xl bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/25">
+                      <button onClick={submitConsoleCommand} className="rounded-xl bg-primary/15 px-3 md:px-4 py-2 text-xs md:text-sm font-semibold text-primary transition hover:bg-primary/25 whitespace-nowrap">
                         Send
                       </button>
                     </div>
-                    <p className="text-[11px] text-muted-foreground">Enter a command in the console area to control the current visualizer.</p>
+                    <p className="text-[10px] md:text-[11px] text-muted-foreground">Enter a command in the console area to control the current visualizer.</p>
                   </div>
                 )}
               </div>
@@ -1226,9 +1227,9 @@ export default function VisualizePage() {
             <motion.div 
               initial={{ opacity: 0, scale: 0.98 }} 
               animate={{ opacity: 1, scale: 1 }} 
-              className="glass-panel-strong p-8 flex-1 flex items-center justify-center relative overflow-hidden"
+              className="glass-panel-strong p-3 md:p-8 flex-1 flex items-center justify-center relative overflow-hidden"
             >
-              <div className="absolute top-4 right-4 text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">Stage</div>
+              <div className="absolute top-2 md:top-4 right-2 md:right-4 text-[8px] md:text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">Stage</div>
               {category === "sorting" && renderSortingViz()}
               {category === "linkedlist" && <LinkedListViz code={editableCode} setLabel={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} />}
               {category === "stack" && <StackViz code={editableCode} setLabel={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} />}
