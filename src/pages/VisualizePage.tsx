@@ -2,7 +2,208 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Play, Pause, SkipForward, SkipBack, RotateCcw, Gauge } from "lucide-react";
 
-type AlgoCategory = "sorting" | "linkedlist" | "stack" | "tree" | "graph";
+const ALGO_CODE: Record<string, string> = {
+  "Bubble Sort": `void bubbleSort(int arr[], int n) {
+  // Edit the data here:
+  int arr[] = {10, 30, 20, 50, 40, 70, 60};
+  int n = 7;
+
+  for (int i = 0; i < n-1; i++) {
+    for (int j = 0; j < n-i-1; j++) {
+      if (arr[j] > arr[j+1]) { // Use < for descending
+        swap(arr[j], arr[j+1]);
+      }
+    }
+  }
+}`,
+  "Selection Sort": `void selectionSort(int arr[], int n) {
+  // Edit the data here:
+  int arr[] = {10, 30, 20, 50, 40, 70, 60};
+  int n = 7;
+
+  for (int i = 0; i < n-1; i++) {
+    int min_idx = i;
+    for (int j = i+1; j < n; j++)
+      if (arr[j] < arr[min_idx]) // Use > for descending
+        min_idx = j;
+    swap(arr[min_idx], arr[i]);
+  }
+}`,
+  "Insertion Sort": `void insertionSort(int arr[], int n) {
+  // Edit the data here:
+  int arr[] = {10, 30, 20, 50, 40, 70, 60};
+  int n = 7;
+
+  for (int i = 1; i < n; i++) {
+    int key = arr[i], j = i - 1;
+    while (j >= 0 && arr[j] > key) { // Use < for descending
+      arr[j + 1] = arr[j];
+      j--;
+    }
+    arr[j + 1] = key;
+  }
+}`,
+  "Merge Sort": `void mergeSort(int arr[], int l, int r) {
+  // Edit the data here:
+  int arr[] = {10, 30, 20, 50, 40, 70, 60};
+  int n = 7;
+
+  if (l < r) {
+    int m = l + (r - l) / 2;
+    mergeSort(arr, l, m);
+    mergeSort(arr, m + 1, r);
+    merge(arr, l, m, r);
+  }
+}`,
+  "Quick Sort": `void quickSort(int arr[], int low, int high) {
+  // Edit the data here:
+  int arr[] = {10, 30, 20, 50, 40, 70, 60};
+  int n = 7;
+
+  if (low < high) {
+    int pi = partition(arr, low, high);
+    quickSort(arr, low, pi - 1);
+    quickSort(arr, pi + 1, high);
+  }
+}`,
+  "LinkedList": `// Edit initial nodes here:
+int data[] = {10, 20, 30, 40};
+
+// Insert at End
+void insertAtEnd(Node** head, int val) {
+  Node* newNode = new Node(val);
+  if (*head == NULL) { *head = newNode; return; }
+  Node* last = *head;
+  while (last->next) last = last->next;
+  last->next = newNode;
+}
+
+// Delete from Head
+void deleteHead(Node** head) {
+  if (*head == NULL) return;
+  Node* temp = *head;
+  *head = (*head)->next;
+  delete temp;
+}`,
+  "Stack": `// Edit initial data here:
+int data[] = {5, 12, 8};
+int push_val = 15;
+
+void push(int val) {
+  if (top >= MAX-1) return;
+  stack[++top] = val;
+}
+
+int pop() {
+  if (top < 0) return -1;
+  return stack[top--];
+}
+`,
+  "Queue": `
+int data[] = {10, 20, 30};
+int enqueue_val = 40;
+
+void enqueue(int val) {
+  if (rear == MAX-1) return;
+  queue[++rear] = val;
+}
+
+int dequeue() {
+  if (front > rear) return -1;
+  return queue[front++];
+}`,
+  "Tree": `// Inorder Traversal
+void inorder(Node* root) {
+  if (!root) return;
+  inorder(root->left);
+  cout << root->val << " ";
+  inorder(root->right);
+}
+
+// Preorder Traversal
+void preorder(Node* root) {
+  if (!root) return;
+  cout << root->val << " ";
+  preorder(root->left);
+  preorder(root->right);
+}
+
+// Postorder Traversal
+void postorder(Node* root) {
+  if (!root) return;
+  postorder(root->left);
+  postorder(root->right);
+  cout << root->val << " ";
+}`,
+  "Graph": `
+void BFS(int s) {
+  queue<int> q;
+  visited[s] = true; q.push(s);
+  while(!q.empty()) {
+    s = q.front(); q.pop();
+    for(auto i : adj[s]) {
+      if(!visited[i]) {
+        visited[i] = true; q.push(i);
+      }
+    }
+  }
+}`,
+  "DFS": `// DFS Traversal
+void DFS(int v) {
+  visited[v] = true;
+  for (auto i : adj[v])
+    if (!visited[i]) DFS(i);
+}`,
+  "Dijkstra": `// Dijkstra's Shortest Path
+void dijkstra(int src) {
+  vector<int> dist(n, INT_MAX);
+  priority_queue<pair<int,int>, vector<pair<int,int>>, greater<pair<int,int>>> pq;
+  
+  dist[src] = 0;
+  pq.push({0, src});
+  
+  while (!pq.empty()) {
+    int d = pq.top().first;
+    int u = pq.top().second;
+    pq.pop();
+    
+    if (d > dist[u]) continue;
+    
+    for (auto &edge : adj[u]) {
+      int v = edge.first;
+      int w = edge.second;
+      if (dist[u] + w < dist[v]) {
+        dist[v] = dist[u] + w;
+        pq.push({dist[v], v});
+      }
+    }
+  }
+}`,
+};
+
+function CodeBlock({ code, onChange }: { code: string; onChange: (val: string) => void | React.Dispatch<React.SetStateAction<string>> }) {
+  return (
+    <div className="flex flex-col h-full">
+      <div className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 mb-2 px-1 flex items-center gap-2">
+        <div className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse" />
+        Live Implementation Editor
+      </div>
+      <div className="relative group flex-1">
+        <textarea
+          value={code}
+          onChange={(e) => onChange(e.target.value)}
+          className="w-full h-full glass-panel p-4 font-mono text-sm leading-relaxed text-primary overflow-x-auto whitespace-pre outline-none focus:ring-2 focus:ring-primary/50 transition-all resize-none scrollbar-hide"
+          spellCheck={false}
+        />
+        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <span className="text-[9px] bg-primary/20 text-primary px-2 py-1 rounded">Editable</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+type AlgoCategory = "sorting" | "linkedlist" | "stack" | "queue" | "tree" | "graph";
 
 interface VisualizationStep {
   array: number[];
@@ -15,12 +216,13 @@ interface VisualizationStep {
 const CATEGORIES: { key: AlgoCategory; label: string; algorithms: string[] }[] = [
   { key: "sorting", label: "Arrays & Sorting", algorithms: ["Bubble Sort", "Selection Sort", "Insertion Sort", "Merge Sort", "Quick Sort"] },
   { key: "linkedlist", label: "Linked Lists", algorithms: ["Insert Node", "Delete Node", "Reverse List"] },
-  { key: "stack", label: "Stacks & Queues", algorithms: ["Push/Pop", "Enqueue/Dequeue"] },
+  { key: "stack", label: "Stacks", algorithms: ["Push/Pop"] },
+  { key: "queue", label: "Queues", algorithms: ["Enqueue/Dequeue"] },
   { key: "tree", label: "Trees", algorithms: ["Inorder", "Preorder", "Postorder", "BFS"] },
   { key: "graph", label: "Graphs", algorithms: ["BFS", "DFS", "Dijkstra"] },
 ];
 
-function generateBubbleSortSteps(arr: number[]): VisualizationStep[] {
+function generateBubbleSortSteps(arr: number[], descending: boolean = false): VisualizationStep[] {
   const steps: VisualizationStep[] = [];
   const a = [...arr];
   const sorted: number[] = [];
@@ -29,19 +231,24 @@ function generateBubbleSortSteps(arr: number[]): VisualizationStep[] {
   for (let i = 0; i < a.length - 1; i++) {
     for (let j = 0; j < a.length - i - 1; j++) {
       steps.push({ array: [...a], comparing: [j, j + 1], swapping: [], sorted: [...sorted], label: `Comparing ${a[j]} and ${a[j + 1]}` });
-      if (a[j] > a[j + 1]) {
+      const shouldSwap = descending ? a[j] < a[j + 1] : a[j] > a[j + 1];
+      if (shouldSwap) {
         [a[j], a[j + 1]] = [a[j + 1], a[j]];
         steps.push({ array: [...a], comparing: [], swapping: [j, j + 1], sorted: [...sorted], label: `Swapped ${a[j + 1]} and ${a[j]}` });
       }
     }
-    sorted.push(a.length - 1 - i);
+    if (!descending) sorted.push(a.length - 1 - i);
   }
-  sorted.push(0);
-  steps.push({ array: [...a], comparing: [], swapping: [], sorted: [...sorted], label: "Sorted!" });
+  if (!descending) {
+    sorted.push(0);
+    steps.push({ array: [...a], comparing: [], swapping: [], sorted: [...sorted], label: "Sorted!" });
+  } else {
+    steps.push({ array: [...a], comparing: [], swapping: [], sorted: a.map((_, idx) => idx), label: "Sorted Descending!" });
+  }
   return steps;
 }
 
-function generateSelectionSortSteps(arr: number[]): VisualizationStep[] {
+function generateSelectionSortSteps(arr: number[], descending: boolean = false): VisualizationStep[] {
   const steps: VisualizationStep[] = [];
   const a = [...arr];
   const sorted: number[] = [];
@@ -51,7 +258,8 @@ function generateSelectionSortSteps(arr: number[]): VisualizationStep[] {
     let minIdx = i;
     for (let j = i + 1; j < a.length; j++) {
       steps.push({ array: [...a], comparing: [minIdx, j], swapping: [], sorted: [...sorted], label: `Finding minimum: comparing ${a[minIdx]} and ${a[j]}` });
-      if (a[j] < a[minIdx]) minIdx = j;
+      const shouldUpdate = descending ? a[j] > a[minIdx] : a[j] < a[minIdx];
+      if (shouldUpdate) minIdx = j;
     }
     if (minIdx !== i) {
       [a[i], a[minIdx]] = [a[minIdx], a[i]];
@@ -59,44 +267,52 @@ function generateSelectionSortSteps(arr: number[]): VisualizationStep[] {
     }
     sorted.push(i);
   }
-  sorted.push(a.length - 1);
-  steps.push({ array: [...a], comparing: [], swapping: [], sorted: [...sorted], label: "Sorted!" });
+  if (!descending) {
+    sorted.push(a.length - 1);
+    steps.push({ array: [...a], comparing: [], swapping: [], sorted: [...sorted], label: "Sorted!" });
+  } else {
+    steps.push({ array: [...a], comparing: [], swapping: [], sorted: a.map((_, idx) => idx), label: "Sorted Descending!" });
+  }
   return steps;
 }
 
-function generateInsertionSortSteps(arr: number[]): VisualizationStep[] {
+function generateInsertionSortSteps(arr: number[], descending: boolean = false): VisualizationStep[] {
   const steps: VisualizationStep[] = [];
   const a = [...arr];
-  const sorted: number[] = [0];
+  const sorted: number[] = [];
   steps.push({ array: [...a], comparing: [], swapping: [], sorted: [0], label: "Initial array" });
 
   for (let i = 1; i < a.length; i++) {
     let j = i;
-    while (j > 0 && a[j - 1] > a[j]) {
+    while (j > 0) {
       steps.push({ array: [...a], comparing: [j - 1, j], swapping: [], sorted: [...sorted], label: `Comparing ${a[j - 1]} and ${a[j]}` });
-      [a[j - 1], a[j]] = [a[j], a[j - 1]];
-      steps.push({ array: [...a], comparing: [], swapping: [j - 1, j], sorted: [...sorted], label: `Inserted ${a[j]} into correct position` });
+      const shouldSwap = descending ? a[j - 1] < a[j] : a[j - 1] > a[j];
+      if (shouldSwap) {
+        [a[j - 1], a[j]] = [a[j], a[j - 1]];
+        steps.push({ array: [...a], comparing: [], swapping: [j - 1, j], sorted: [...sorted], label: `Inserted ${a[j]} into correct position` });
+      } else {
+        break;
+      }
       j--;
     }
     sorted.push(i);
   }
-  steps.push({ array: [...a], comparing: [], swapping: [], sorted: a.map((_, i) => i), label: "Sorted!" });
+  steps.push({ array: [...a], comparing: [], swapping: [], sorted: a.map((_, i) => i), label: descending ? "Sorted Descending!" : "Sorted!" });
   return steps;
 }
 
 // Linked List visualization
 interface LLNode { value: number; id: number; }
 
-function LinkedListViz() {
-  const [nodes, setNodes] = useState<LLNode[]>([
-    { value: 10, id: 0 }, { value: 20, id: 1 }, { value: 30, id: 2 }, { value: 40, id: 3 }
-  ]);
+function LinkedListViz({ code, setLabel, syncTrigger, commandText, commandId }: { code: string; setLabel: (l: string) => void; syncTrigger: number; commandText: string; commandId: number }) {
+  const [nodes, setNodes] = useState<LLNode[]>([]);
   const [highlight, setHighlight] = useState<number>(-1);
-  const [label, setLabel] = useState("Linked List ready");
-  const nextId = useRef(4);
+  const nextId = useRef(nodes.length);
 
-  const insertAtEnd = () => {
-    const val = Math.floor(Math.random() * 90) + 10;
+  const insertAtEnd = (value?: number) => {
+    const match = code.match(/insert_val\s*=\s*(\d+)/);
+    const val = value ?? (match ? parseInt(match[1]) : 50);
+
     setHighlight(nodes.length);
     setLabel(`Inserting ${val} at end...`);
     setTimeout(() => {
@@ -106,16 +322,52 @@ function LinkedListViz() {
     }, 400);
   };
 
-  const deleteFirst = () => {
-    if (nodes.length === 0) return;
-    setHighlight(0);
-    setLabel(`Deleting ${nodes[0].value} from head...`);
+  const deleteByValue = (value?: number) => {
+    if (nodes.length === 0) {
+      setLabel("List is empty.");
+      return;
+    }
+
+    const match = code.match(/delete_val\s*=\s*(\d+)/);
+    const val = value ?? (match ? parseInt(match[1]) : nodes[0].value);
+
+    const index = nodes.findIndex(n => n.value === val);
+    if (index === -1) {
+      setLabel(`Value ${val} not found in list`);
+      return;
+    }
+
+    setHighlight(index);
+    setLabel(`Deleting node with value ${val}...`);
     setTimeout(() => {
-      setNodes(prev => prev.slice(1));
-      setLabel("Deleted head node");
+      setNodes(prev => prev.filter((_, i) => i !== index));
+      setLabel(`Deleted node with value ${val}`);
       setHighlight(-1);
     }, 600);
   };
+
+  useEffect(() => {
+    const dataMatch = code.match(/data\[\]\s*=\s*\{([^}]+)\}/);
+    if (dataMatch) {
+      const vals = dataMatch[1].split(",").map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+      setNodes(vals.map((v, i) => ({ value: v, id: i })));
+      nextId.current = vals.length;
+    }
+  }, [syncTrigger]); // Triggered on Sync & Build
+
+  useEffect(() => {
+    if (!commandText) return;
+    const command = commandText.trim().toLowerCase();
+    const insertMatch = command.match(/^insert\s+(\d+)$/);
+    const deleteMatch = command.match(/^delete\s+(\d+)$/);
+    if (insertMatch) {
+      insertAtEnd(Number(insertMatch[1]));
+    } else if (deleteMatch) {
+      deleteByValue(Number(deleteMatch[1]));
+    } else {
+      setLabel("Invalid command. Use insert <value> or delete <value>.");
+    }
+  }, [commandId]);
 
   return (
     <div className="flex flex-col items-center gap-6">
@@ -126,46 +378,60 @@ function LinkedListViz() {
               key={node.id}
               layout
               initial={{ opacity: 0, scale: 0.5, x: -20 }}
-              animate={{ opacity: 1, scale: 1, x: 0, boxShadow: highlight === i ? "0 0 20px hsl(200 100% 55% / 0.6)" : "none" }}
+              animate={{ opacity: 1, scale: 1, x: 0, boxShadow: highlight === i ? "0 0 20px hsl(var(--primary) / 0.6)" : "none" }}
               exit={{ opacity: 0, scale: 0.5, x: 20 }}
               transition={{ type: "spring", stiffness: 300, damping: 25 }}
               className="flex items-center gap-2"
             >
-              <div className={`w-16 h-16 rounded-xl glass-panel flex flex-col items-center justify-center border-2 transition-colors duration-300 ${highlight === i ? "border-primary" : "border-glass-border/50"}`}>
+              <div className={`w-16 h-16 rounded-xl glass-panel flex flex-col items-center justify-center border-2 transition-colors duration-300 ${highlight === i ? "border-primary" : "border-border/50"}`}>
                 <span className="text-lg font-mono font-bold text-foreground">{node.value}</span>
                 <span className="text-[10px] text-muted-foreground">node</span>
               </div>
-              {i < nodes.length - 1 && (
-                <motion.div className="text-primary" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
-                  →
-                </motion.div>
-              )}
+              {i < nodes.length - 1 && <span className="text-primary">→</span>}
             </motion.div>
           ))}
+          {nodes.length > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-primary">→</span>
+              <div className="w-16 h-16 rounded-xl glass-panel flex items-center justify-center border-2 border-border/50">
+                <span className="text-sm font-mono text-muted-foreground">null</span>
+              </div>
+            </div>
+          )}
+          {nodes.length === 0 && (
+            <div className="w-full flex items-center justify-center text-sm text-muted-foreground">null</div>
+          )}
         </AnimatePresence>
-        <div className="w-12 h-12 rounded-lg border-2 border-dashed border-muted flex items-center justify-center text-muted-foreground text-xs">
-          null
-        </div>
       </div>
-      <p className="text-sm text-primary font-mono neon-text-blue">{label}</p>
-      <div className="flex gap-3">
-        <button onClick={insertAtEnd} className="glass-panel px-4 py-2 text-sm text-neon-cyan hover:bg-neon-cyan/10 transition-colors font-semibold">Insert</button>
-        <button onClick={deleteFirst} className="glass-panel px-4 py-2 text-sm text-neon-orange hover:bg-neon-orange/10 transition-colors font-semibold">Delete Head</button>
+      <div className="flex items-center gap-3">
+        <button onClick={() => insertAtEnd()} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold">Insert</button>
+        <button onClick={() => deleteByValue()} className="glass-panel px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors font-semibold">Delete Node</button>
       </div>
     </div>
   );
 }
 
 // Stack visualization
-function StackViz() {
+function StackViz({ code, setLabel, syncTrigger, commandText, commandId }: { code: string; setLabel: (l: string) => void; syncTrigger: number; commandText: string; commandId: number }) {
   const [stack, setStack] = useState<{ value: number; id: number }[]>([
     { value: 5, id: 0 }, { value: 12, id: 1 }, { value: 8, id: 2 }
   ]);
-  const [label, setLabel] = useState("Stack ready");
-  const nextId = useRef(3);
+  const nextId = useRef(stack.length);
+
+  useEffect(() => {
+    const dataMatch = code.match(/data\[\]\s*=\s*\{([^}]+)\}/);
+    if (dataMatch) {
+      const vals = dataMatch[1].split(",").map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+      setStack(vals.map((v, i) => ({ value: v, id: i })));
+      nextId.current = vals.length;
+    }
+  }, [syncTrigger]);
 
   const push = () => {
-    const val = Math.floor(Math.random() * 90) + 10;
+    // Parse value from code marker
+    const match = code.match(/push_val\s*=\s*(\d+)/);
+    const val = match ? parseInt(match[1]) : 15;
+
     setLabel(`Pushing ${val}...`);
     setStack(prev => [...prev, { value: val, id: nextId.current++ }]);
     setTimeout(() => setLabel(`Pushed ${val}`), 300);
@@ -181,8 +447,24 @@ function StackViz() {
     }, 300);
   };
 
+  useEffect(() => {
+    if (!commandText) return;
+    const command = commandText.trim().toLowerCase();
+    const pushMatch = command.match(/^push\s+(\d+)$/);
+    if (pushMatch) {
+      const val = Number(pushMatch[1]);
+      setLabel(`Pushing ${val}...`);
+      setStack(prev => [...prev, { value: val, id: nextId.current++ }]);
+      setTimeout(() => setLabel(`Pushed ${val}`), 300);
+    } else if (command === "pop") {
+      pop();
+    } else {
+      setLabel("Invalid command. Use push <value> or pop.");
+    }
+  }, [commandId]);
+
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-6">
       <div className="flex flex-col-reverse items-center gap-1 min-h-[200px]">
         <div className="w-32 h-2 bg-muted rounded-full" />
         <AnimatePresence mode="popLayout">
@@ -202,10 +484,89 @@ function StackViz() {
           ))}
         </AnimatePresence>
       </div>
-      <p className="text-sm text-primary font-mono neon-text-blue">{label}</p>
-      <div className="flex gap-3">
-        <button onClick={push} className="glass-panel px-4 py-2 text-sm text-neon-cyan hover:bg-neon-cyan/10 transition-colors font-semibold">Push</button>
-        <button onClick={pop} className="glass-panel px-4 py-2 text-sm text-neon-orange hover:bg-neon-orange/10 transition-colors font-semibold">Pop</button>
+      <div className="flex items-center gap-3">
+        <button onClick={push} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold">Push</button>
+        <button onClick={pop} className="glass-panel px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors font-semibold">Pop</button>
+      </div>
+    </div>
+  );
+}
+
+// Queue visualization
+function QueueViz({ code, onStep, onComplete, syncTrigger, commandText, commandId }: { code: string; onStep: (l: string) => void; onComplete: (l: string) => void; syncTrigger: number; commandText: string; commandId: number }) {
+  const [queue, setQueue] = useState<{ value: number; id: number }[]>([]);
+  const nextId = useRef(0);
+
+  useEffect(() => {
+    const dataMatch = code.match(/data\[\]\s*=\s*\{([^}]+)\}/);
+    if (dataMatch) {
+      const vals = dataMatch[1].split(",").map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+      setQueue(vals.map((v, i) => ({ value: v, id: i })));
+      nextId.current = vals.length;
+      onComplete("Queue synced from code");
+    }
+  }, [syncTrigger, code]);
+
+  const enqueue = () => {
+    const match = code.match(/enqueue_val\s*=\s*(\d+)/);
+    const val = match ? parseInt(match[1]) : 40;
+    onStep(`Enqueuing ${val}...`);
+    setQueue(prev => [...prev, { value: val, id: nextId.current++ }]);
+    setTimeout(() => { onStep("Visualizer Ready"); onComplete(`Enqueued ${val}`); }, 300);
+  };
+
+  const dequeue = () => {
+    if (queue.length === 0) return;
+    const val = queue[0].value;
+    onStep(`Dequeuing ${val}...`);
+    setTimeout(() => {
+      setQueue(prev => prev.slice(1));
+      onStep("Visualizer Ready");
+      onComplete(`Dequeued ${val}`);
+    }, 300);
+  };
+
+  useEffect(() => {
+    if (!commandText) return;
+    const command = commandText.trim().toLowerCase();
+    const enqueueMatch = command.match(/^enqueue\s+(\d+)$/);
+    if (enqueueMatch) {
+      const val = Number(enqueueMatch[1]);
+      onStep(`Enqueuing ${val}...`);
+      setQueue(prev => [...prev, { value: val, id: nextId.current++ }]);
+      setTimeout(() => { onStep("Visualizer Ready"); onComplete(`Enqueued ${val}`); }, 300);
+    } else if (command === "dequeue") {
+      dequeue();
+    } else {
+      onComplete("Invalid command. Use enqueue <value> or dequeue.");
+    }
+  }, [commandId]);
+
+  return (
+    <div className="flex flex-col items-center gap-8">
+      <div className="flex items-center gap-1 min-h-[120px] p-4 glass-panel rounded-xl border-dashed border-2 border-primary/20 relative">
+        <div className="absolute -left-12 top-1/2 -translate-y-1/2 text-[10px] uppercase font-bold text-primary rotate-90">Front</div>
+        <div className="absolute -right-12 top-1/2 -translate-y-1/2 text-[10px] uppercase font-bold text-destructive -rotate-90">Rear</div>
+        <AnimatePresence mode="popLayout">
+          {queue.map((item, i) => (
+            <motion.div
+              key={item.id}
+              layout
+              initial={{ opacity: 0, scale: 0.5, x: 50 }}
+              animate={{ opacity: 1, scale: 1, x: 0 }}
+              exit={{ opacity: 0, scale: 0.5, x: -50 }}
+              transition={{ type: "spring", stiffness: 300, damping: 25 }}
+              className={`w-16 h-16 rounded-lg glass-panel flex items-center justify-center font-mono font-bold text-foreground relative ${i === 0 ? "border-primary neon-glow-blue" : i === queue.length - 1 ? "border-destructive" : "border-border/50"}`}
+            >
+              {item.value}
+            </motion.div>
+          ))}
+        </AnimatePresence>
+        {queue.length === 0 && <span className="text-muted-foreground/40 font-mono text-xs italic">Queue Empty</span>}
+      </div>
+      <div className="flex items-center gap-3">
+        <button onClick={enqueue} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold">Enqueue</button>
+        <button onClick={dequeue} className="glass-panel px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors font-semibold">Dequeue</button>
       </div>
     </div>
   );
@@ -220,11 +581,11 @@ const SAMPLE_TREE: TreeNode = {
   right: { value: 70, left: { value: 60 }, right: { value: 80 } },
 };
 
-function TreeViz() {
+function TreeViz({ onStep, onComplete }: { onStep: (l: string) => void; onComplete: (l: string) => void }) {
   const [highlighted, setHighlighted] = useState<number[]>([]);
   const [visited, setVisited] = useState<number[]>([]);
-  const [label, setLabel] = useState("Binary Search Tree ready");
   const [running, setRunning] = useState(false);
+  const [localStatus, setLocalStatus] = useState("Visualizer Ready");
 
   const inorder = (node: TreeNode | undefined, result: number[]) => {
     if (!node) return;
@@ -238,6 +599,8 @@ function TreeViz() {
     setRunning(true);
     setVisited([]);
     setHighlighted([]);
+    setLocalStatus("Running...");
+    onStep(`${type} traversal started`);
     const order: number[] = [];
 
     const traverse = (node: TreeNode | undefined) => {
@@ -254,11 +617,14 @@ function TreeViz() {
       await new Promise(r => setTimeout(r, 600));
       setHighlighted([order[i]]);
       setVisited(prev => [...prev, order[i]]);
-      setLabel(`${type}: Visiting ${order[i]}`);
+      onStep(`${type}: Visiting ${order[i]}`);
+      setLocalStatus(`Visiting ${order[i]}`);
     }
     await new Promise(r => setTimeout(r, 400));
     setHighlighted([]);
-    setLabel(`${type} complete: [${order.join(", ")}]`);
+    onComplete(`${type} complete: [${order.join(", ")}]`);
+    onStep("Visualizer Ready");
+    setLocalStatus("Complete");
     setRunning(false);
   };
 
@@ -291,10 +657,10 @@ function TreeViz() {
       <svg viewBox="0 0 400 250" className="w-full max-w-lg">
         {renderNode(SAMPLE_TREE, 200, 30, 80)}
       </svg>
-      <p className="text-sm text-primary font-mono neon-text-blue">{label}</p>
+      <p className="text-sm text-primary font-mono neon-text-blue">{localStatus}</p>
       <div className="flex gap-2 flex-wrap justify-center">
         {(["inorder", "preorder", "postorder"] as const).map(t => (
-          <button key={t} onClick={() => runTraversal(t)} disabled={running} className="glass-panel px-4 py-2 text-sm text-neon-cyan hover:bg-neon-cyan/10 transition-colors font-semibold capitalize disabled:opacity-40">
+          <button key={t} onClick={() => runTraversal(t)} disabled={running} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold capitalize disabled:opacity-40">
             {t}
           </button>
         ))}
@@ -304,7 +670,7 @@ function TreeViz() {
 }
 
 // Graph visualization
-function GraphViz() {
+function GraphViz({ selectedAlgo, onStep, onComplete, commandText, commandId }: { selectedAlgo: string; onStep: (l: string) => void; onComplete: (l: string | ((prev: string) => string)) => void; commandText: string; commandId: number }) {
   const nodes = [
     { id: 0, x: 200, y: 40, label: "A" },
     { id: 1, x: 80, y: 120, label: "B" },
@@ -313,85 +679,216 @@ function GraphViz() {
     { id: 4, x: 160, y: 220, label: "E" },
     { id: 5, x: 280, y: 220, label: "F" },
   ];
-  const edges = [[0,1],[0,2],[1,3],[1,4],[2,4],[2,5],[3,4],[4,5]];
-  const adj: number[][] = Array.from({ length: 6 }, () => []);
-  edges.forEach(([a,b]) => { adj[a].push(b); adj[b].push(a); });
+  
+  // Unweighted edges for BFS and DFS
+  const unweightedEdges = [[0, 1], [0, 2], [1, 3], [1, 4], [2, 4], [2, 5], [3, 4], [4, 5]];
+  
+  // Weighted edges for Dijkstra
+  const weightedEdges = [[0, 1, 4], [0, 2, 2], [1, 3, 5], [1, 4, 10], [2, 4, 3], [2, 5, 8], [3, 4, 2], [4, 5, 6]];
+  
+  // Build adjacency list based on algorithm
+  const isUsingWeights = selectedAlgo === "Dijkstra";
+  const edges = isUsingWeights ? weightedEdges : unweightedEdges.map(([a, b]) => [a, b, 0]);
+  
+  const adj: { node: number; weight: number }[][] = Array.from({ length: 6 }, () => []);
+  edges.forEach(([a, b, w]) => { adj[a].push({ node: b as number, weight: (w as number) || 1 }); adj[b].push({ node: a as number, weight: (w as number) || 1 }); });
 
   const [visited, setVisited] = useState<number[]>([]);
   const [highlighted, setHighlighted] = useState<number[]>([]);
   const [activeEdges, setActiveEdges] = useState<string[]>([]);
-  const [label, setLabel] = useState("Graph ready");
+  const [localStatus, setLocalStatus] = useState("Ready");
   const [running, setRunning] = useState(false);
+  const [startNode, setStartNode] = useState(0);
+  const [goalNode, setGoalNode] = useState(5);
+  const [queueState, setQueueState] = useState<number[]>([]);
+  const [stackState, setStackState] = useState<number[]>([]);
+
+  useEffect(() => {
+    if (!commandText) return;
+    const command = commandText.trim().toUpperCase();
+    const startMatch = command.match(/^START\s+([A-F])$/);
+    const goalMatch = command.match(/^GOAL\s+([A-F])$/);
+    if (startMatch) {
+      const nodeLabel = startMatch[1];
+      const nodeIdx = nodes.findIndex(n => n.label === nodeLabel);
+      if (nodeIdx !== -1) {
+        setStartNode(nodeIdx);
+        setLocalStatus(`Start node set to ${nodeLabel}`);
+      }
+    } else if (goalMatch) {
+      const nodeLabel = goalMatch[1];
+      const nodeIdx = nodes.findIndex(n => n.label === nodeLabel);
+      if (nodeIdx !== -1) {
+        setGoalNode(nodeIdx);
+        setLocalStatus(`Goal node set to ${nodeLabel}`);
+      }
+    }
+  }, [commandId]);
 
   const runBFS = async () => {
     if (running) return;
     setRunning(true);
-    setVisited([]); setHighlighted([]); setActiveEdges([]);
-    const queue = [0];
-    const seen = new Set([0]);
+    setVisited([]); setHighlighted([]); setActiveEdges([]); setQueueState([]); setLocalStatus("BFS Running...");
+    const queue = [startNode];
+    const seen = new Set([startNode]);
+    setQueueState([startNode]);
     while (queue.length) {
       const curr = queue.shift()!;
+      setQueueState([...queue]);
       setHighlighted([curr]);
       setVisited(prev => [...prev, curr]);
-      setLabel(`BFS: Visiting ${nodes[curr].label}`);
+      onStep(`BFS: Visiting ${nodes[curr].label}`);
+      setLocalStatus(`Visiting ${nodes[curr].label}`);
       await new Promise(r => setTimeout(r, 700));
-      for (const nb of adj[curr]) {
+      for (const edge of adj[curr]) {
+        const nb = edge.node;
         if (!seen.has(nb)) {
           seen.add(nb);
           queue.push(nb);
-          setActiveEdges(prev => [...prev, `${Math.min(curr,nb)}-${Math.max(curr,nb)}`]);
+          setQueueState([...queue]);
+          setActiveEdges(prev => [...prev, `${Math.min(curr, nb)}-${Math.max(curr, nb)}`]);
         }
       }
     }
     setHighlighted([]);
-    setLabel("BFS complete!");
+    setQueueState([]);
+    onComplete(prev => prev + "\nBFS complete!");
+    onStep("Visualizer Ready");
+    setLocalStatus("Complete");
     setRunning(false);
   };
 
   const runDFS = async () => {
     if (running) return;
     setRunning(true);
-    setVisited([]); setHighlighted([]); setActiveEdges([]);
+    setVisited([]); setHighlighted([]); setActiveEdges([]); setStackState([]); setLocalStatus("DFS Running...");
     const seen = new Set<number>();
+    const stack: number[] = [];
     const dfs = async (node: number) => {
       seen.add(node);
+      stack.push(node);
+      setStackState([...stack]);
       setHighlighted([node]);
       setVisited(prev => [...prev, node]);
-      setLabel(`DFS: Visiting ${nodes[node].label}`);
+      onStep(`DFS: Visiting ${nodes[node].label}`);
+      setLocalStatus(`Visiting ${nodes[node].label}`);
       await new Promise(r => setTimeout(r, 700));
-      for (const nb of adj[node]) {
+      for (const edge of adj[node]) {
+        const nb = edge.node;
         if (!seen.has(nb)) {
-          setActiveEdges(prev => [...prev, `${Math.min(node,nb)}-${Math.max(node,nb)}`]);
+          setActiveEdges(prev => [...prev, `${Math.min(node, nb)}-${Math.max(node, nb)}`]);
           await dfs(nb);
         }
       }
+      stack.pop();
+      setStackState([...stack]);
     };
-    await dfs(0);
+    await dfs(startNode);
     setHighlighted([]);
-    setLabel("DFS complete!");
+    setStackState([]);
+    onComplete(prev => prev + "\nDFS complete!");
+    onStep("Visualizer Ready");
+    setLocalStatus("Complete");
     setRunning(false);
   };
 
+  const runDijkstra = async () => {
+    if (running) return;
+    setRunning(true);
+    setVisited([]); setHighlighted([]); setActiveEdges([]); setLocalStatus("Dijkstra Running...");
+    const dist = Array(nodes.length).fill(Number.MAX_SAFE_INTEGER);
+    const prev: (number | null)[] = Array(nodes.length).fill(null);
+    dist[startNode] = 0;
+    const unvisited = new Set(nodes.map(n => n.id));
+
+    while (unvisited.size) {
+      let current = -1;
+      let best = Number.MAX_SAFE_INTEGER;
+      for (const nodeId of unvisited) {
+        if (dist[nodeId] < best) {
+          best = dist[nodeId];
+          current = nodeId;
+        }
+      }
+      if (current === -1 || best === Number.MAX_SAFE_INTEGER) break;
+      unvisited.delete(current);
+      setHighlighted([current]);
+      setVisited(prevState => [...prevState, current]);
+      onStep(`Dijkstra: Visiting ${nodes[current].label}`);
+      setLocalStatus(`Visiting ${nodes[current].label}`);
+      
+      if (current === goalNode) {
+        setLocalStatus(`Goal ${nodes[goalNode].label} reached!`);
+        break;
+      }
+
+      await new Promise(r => setTimeout(r, 700));
+      for (const edge of adj[current]) {
+        const nb = edge.node;
+        const weight = edge.weight;
+        const alt = dist[current] + weight;
+        if (alt < dist[nb]) {
+          dist[nb] = alt;
+          prev[nb] = current;
+          setActiveEdges(prevEdges => [...prevEdges, `${Math.min(current, nb)}-${Math.max(current, nb)}`]);
+        }
+      }
+    }
+
+    setHighlighted([]);
+    const path = [];
+    if (dist[goalNode] !== Number.MAX_SAFE_INTEGER) {
+      let curr: number | null = goalNode;
+      while (curr !== null) {
+        path.push(nodes[curr].label);
+        curr = prev[curr];
+      }
+    }
+    const pathStr = path.length ? path.reverse().join("->") : "No path";
+    onComplete(prev => prev + `\nDijkstra complete! Path: ${pathStr}, Cost: ${dist[goalNode]}`);
+    onStep("Visualizer Ready");
+    setLocalStatus("Complete");
+    setRunning(false);
+  };
+
+  const runSelectedAlgo = () => {
+    if (selectedAlgo === "BFS") runBFS();
+    else if (selectedAlgo === "DFS") runDFS();
+    else runDijkstra();
+  };
+
   return (
-    <div className="flex flex-col items-center gap-4">
+    <div className="flex flex-col items-center gap-4 w-full">
       <svg viewBox="0 0 400 270" className="w-full max-w-lg">
-        {edges.map(([a,b]) => {
-          const edgeKey = `${Math.min(a,b)}-${Math.max(a,b)}`;
+        {edges.map(([a, b, w]) => {
+          const edgeKey = `${Math.min(a as number, b as number)}-${Math.max(a as number, b as number)}`;
           const isActive = activeEdges.includes(edgeKey);
+          const midX = (nodes[a as number].x + nodes[b as number].x) / 2;
+          const midY = (nodes[a as number].y + nodes[b as number].y) / 2;
           return (
-            <line key={edgeKey} x1={nodes[a].x} y1={nodes[a].y} x2={nodes[b].x} y2={nodes[b].y}
-              stroke={isActive ? "hsl(200 100% 55%)" : "hsl(230 20% 25%)"} strokeWidth={isActive ? 3 : 1.5}
-              style={{ transition: "stroke 0.3s, stroke-width 0.3s" }} />
+            <g key={edgeKey}>
+              <line x1={nodes[a as number].x} y1={nodes[a as number].y} x2={nodes[b as number].x} y2={nodes[b as number].y}
+                stroke={isActive ? "hsl(200 100% 55%)" : "hsl(230 20% 25%)"} strokeWidth={isActive ? 3 : 1.5}
+                style={{ transition: "stroke 0.3s, stroke-width 0.3s" }} />
+              {isUsingWeights && (
+                <text x={midX} y={midY - 5} textAnchor="middle" fill="hsl(var(--muted-foreground))" fontSize={10} className="font-mono">
+                  {w}
+                </text>
+              )}
+            </g>
           );
         })}
         {nodes.map(n => {
           const isHigh = highlighted.includes(n.id);
           const isVis = visited.includes(n.id);
+          const isStart = n.id === startNode;
+          const isGoal = n.id === goalNode;
           return (
             <g key={n.id}>
               <circle cx={n.x} cy={n.y} r={22}
                 fill={isHigh ? "hsl(200 100% 55%)" : isVis ? "hsl(270 80% 60%)" : "hsl(230 25% 15%)"}
-                stroke={isHigh ? "hsl(200 100% 65%)" : "hsl(230 20% 30%)"} strokeWidth={2}
+                stroke={isStart ? "hsl(120 100% 40%)" : isGoal ? "hsl(0 100% 50%)" : isHigh ? "hsl(200 100% 65%)" : "hsl(230 20% 30%)"}
+                strokeWidth={isStart || isGoal ? 4 : 2}
                 style={{ transition: "fill 0.3s" }}>
                 {isHigh && <animate attributeName="r" values="22;26;22" dur="0.5s" repeatCount="indefinite" />}
               </circle>
@@ -402,10 +899,55 @@ function GraphViz() {
           );
         })}
       </svg>
-      <p className="text-sm text-primary font-mono neon-text-blue">{label}</p>
+      
+      {/* Queue display for BFS */}
+      {selectedAlgo === "BFS" && (
+        <div className="w-full max-w-lg px-4">
+          <div className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 mb-2">Queue</div>
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2 items-center">
+              <span className="text-[9px] uppercase font-bold text-primary min-w-10">Front</span>
+              <div className="flex items-center gap-1 flex-1 min-h-[50px] p-3 glass-panel rounded-lg border border-primary/20 overflow-x-auto">
+                {queueState.length > 0 ? (
+                  queueState.map((nodeId, i) => (
+                    <div key={i} className="w-10 h-10 rounded-lg glass-panel flex items-center justify-center font-mono font-bold text-foreground text-sm border border-primary/30 flex-shrink-0">
+                      {nodes[nodeId].label}
+                    </div>
+                  ))
+                ) : (
+                  <span className="text-muted-foreground/40 text-xs italic">Empty</span>
+                )}
+              </div>
+              <span className="text-[9px] uppercase font-bold text-destructive min-w-10">Rear</span>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Stack display for DFS */}
+      {selectedAlgo === "DFS" && (
+        <div className="w-full max-w-lg px-4">
+          <div className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 mb-2">Stack</div>
+          <div className="flex flex-col-reverse items-center gap-1 min-h-[60px] p-3 glass-panel rounded-lg border border-primary/20">
+            {stackState.length > 0 ? (
+              stackState.map((nodeId, i) => (
+                <div key={i} className={`w-10 h-10 rounded-lg glass-panel flex items-center justify-center font-mono font-bold text-foreground text-sm border ${i === stackState.length - 1 ? "border-primary" : "border-primary/30"} ${i === stackState.length - 1 ? "neon-glow-blue" : ""}`}>
+                  {nodes[nodeId].label}
+                  {i === stackState.length - 1 && <span className="ml-1 text-[8px] text-primary">top</span>}
+                </div>
+              ))
+            ) : (
+              <span className="text-muted-foreground/40 text-xs italic">Stack Empty</span>
+            )}
+          </div>
+        </div>
+      )}
+      
+      <p className="text-sm text-primary font-mono neon-text-blue">{localStatus}</p>
       <div className="flex gap-3">
-        <button onClick={runBFS} disabled={running} className="glass-panel px-4 py-2 text-sm text-neon-cyan hover:bg-neon-cyan/10 transition-colors font-semibold disabled:opacity-40">BFS</button>
-        <button onClick={runDFS} disabled={running} className="glass-panel px-4 py-2 text-sm text-neon-orange hover:bg-neon-orange/10 transition-colors font-semibold disabled:opacity-40">DFS</button>
+        <button onClick={runSelectedAlgo} disabled={running} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold disabled:opacity-40">
+          Run {selectedAlgo}
+        </button>
       </div>
     </div>
   );
@@ -414,24 +956,98 @@ function GraphViz() {
 export default function VisualizePage() {
   const [category, setCategory] = useState<AlgoCategory>("sorting");
   const [selectedAlgo, setSelectedAlgo] = useState("Bubble Sort");
+  const [selectedGraphAlgo, setSelectedGraphAlgo] = useState("BFS");
   const [steps, setSteps] = useState<VisualizationStep[]>([]);
   const [currentStep, setCurrentStep] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(300);
+  const [editableCode, setEditableCode] = useState(ALGO_CODE["Bubble Sort"]);
+  const [consoleLabel, setConsoleLabel] = useState("Visualizer Ready");
+  const [stepLabel, setStepLabel] = useState("Visualizer Ready");
+  const [syncTrigger, setSyncTrigger] = useState(0);
+  const [consoleInput, setConsoleInput] = useState("");
+  const [commandText, setCommandText] = useState("");
+  const [commandId, setCommandId] = useState(0);
   const intervalRef = useRef<number | null>(null);
 
+  const triggerSync = () => { setSyncTrigger(v => v + 1); setConsoleLabel("Synced data from code"); };
+
+  const submitConsoleCommand = () => {
+    const trimmed = consoleInput.trim();
+    if (!trimmed) return;
+    setCommandText(trimmed);
+    setCommandId(prev => prev + 1);
+    setConsoleInput("");
+    setConsoleLabel(`Command: ${trimmed}`);
+    setStepLabel(`Command entered`);
+  };
+
   const generateArray = useCallback(() => {
-    const arr = Array.from({ length: 12 }, () => Math.floor(Math.random() * 80) + 10);
+    // Parse data directly from code
+    let arr: number[] = [];
+    const arrMatch = editableCode.match(/arr\[\]\s*=\s*\{([^}]+)\}/);
+    const nMatch = editableCode.match(/n\s*=\s*(\d+)/);
+
+    if (arrMatch) {
+      arr = arrMatch[1].split(",").map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+      if (nMatch) {
+        const n = parseInt(nMatch[1]);
+        arr = arr.slice(0, n);
+      }
+    } else {
+      // Default fallback
+      arr = [10, 30, 20, 50, 40, 70, 60];
+    }
+    
+    // Logic Reflection: Check if the user changed the comparison in the code
+    const isDescending = editableCode.includes("< arr[j+1]") || editableCode.includes("> arr[min_idx]") || editableCode.includes("< key");
+    
+    const output = `Number of elements ${arr.length}\nArray - {${arr.join(",")},}`;
+    setConsoleLabel(output);
+    
     let newSteps: VisualizationStep[];
-    if (selectedAlgo === "Bubble Sort") newSteps = generateBubbleSortSteps(arr);
-    else if (selectedAlgo === "Selection Sort") newSteps = generateSelectionSortSteps(arr);
-    else newSteps = generateInsertionSortSteps(arr);
+    if (selectedAlgo === "Bubble Sort") newSteps = generateBubbleSortSteps(arr, isDescending);
+    else if (selectedAlgo === "Selection Sort") newSteps = generateSelectionSortSteps(arr, isDescending);
+    else newSteps = generateInsertionSortSteps(arr, isDescending);
     setSteps(newSteps);
     setCurrentStep(0);
     setPlaying(false);
-  }, [selectedAlgo]);
+  }, [selectedAlgo, editableCode]);
 
-  useEffect(() => { if (category === "sorting") generateArray(); }, [generateArray, category]);
+  useEffect(() => { 
+    if (category === "sorting") {
+      setEditableCode(ALGO_CODE[selectedAlgo]);
+      setConsoleLabel(`${selectedAlgo} implementation loaded.`);
+      generateArray(); 
+    } else if (category === "graph") {
+      const codeKey = selectedGraphAlgo === "BFS" ? "Graph" : selectedGraphAlgo;
+      setEditableCode(ALGO_CODE[codeKey as keyof typeof ALGO_CODE]);
+      setConsoleLabel(`${selectedGraphAlgo} implementation loaded.`);
+      setStepLabel("Visualizer Ready");
+    } else {
+      setStepLabel("Visualizer Ready");
+      if (category === "tree") setConsoleLabel("Binary Search Tree initialized.");
+      if (category === "linkedlist") setConsoleLabel("Linked List ready.");
+      if (category === "stack") setConsoleLabel("Stack ready.");
+      if (category === "queue") setConsoleLabel("Queue ready.");
+    }
+  }, [category, selectedAlgo, selectedGraphAlgo]);
+
+  useEffect(() => {
+    if (category === "sorting" && steps[currentStep]) {
+      setStepLabel(steps[currentStep].label);
+    }
+  }, [category, currentStep, steps]);
+
+  useEffect(() => {
+    if (category === "sorting" && steps.length > 0 && currentStep === steps.length - 1) {
+      const finalArr = steps[steps.length - 1].array;
+      setConsoleLabel(prev => {
+        if (prev.includes("Sorted array")) return prev;
+        return prev + `\nSorted array - {${finalArr.join(",")}}`;
+      });
+    }
+  }, [currentStep, steps, category]);
 
   useEffect(() => {
     if (playing && steps.length > 0) {
@@ -458,23 +1074,22 @@ export default function VisualizePage() {
             const isSwapping = currentData.swapping.includes(i);
             const isSorted = currentData.sorted.includes(i);
             let bg = "bg-primary/60";
-            if (isComparing) bg = "bg-neon-cyan";
-            else if (isSwapping) bg = "bg-neon-orange";
-            else if (isSorted) bg = "bg-neon-purple";
+            if (isComparing) bg = "bg-primary";
+            else if (isSwapping) bg = "bg-destructive";
+            else if (isSorted) bg = "bg-secondary";
             return (
               <motion.div
                 key={i}
                 layout
                 transition={{ type: "spring", stiffness: 300, damping: 30 }}
                 className={`rounded-t-md ${bg} transition-colors duration-200 relative flex-1 min-w-[24px] max-w-[48px]`}
-                style={{ height: `${(val / maxVal) * 100}%`, boxShadow: isComparing || isSwapping ? "0 0 15px hsl(200 100% 55% / 0.5)" : "none" }}
+                style={{ height: `${(val / maxVal) * 100}%`, boxShadow: isComparing || isSwapping ? "0 0 15px hsl(var(--primary) / 0.5)" : "none" }}
               >
                 <span className="absolute -top-5 left-1/2 -translate-x-1/2 text-xs font-mono text-foreground">{val}</span>
               </motion.div>
             );
           })}
         </div>
-        <p className="text-sm text-primary font-mono neon-text-blue">{currentData.label}</p>
         {/* Controls */}
         <div className="flex items-center gap-3">
           <button onClick={() => { setCurrentStep(0); setPlaying(false); }} className="glass-panel p-2 hover:bg-muted/50 transition-colors"><RotateCcw className="w-4 h-4 text-foreground" /></button>
@@ -493,9 +1108,9 @@ export default function VisualizePage() {
         </div>
         {/* Legend */}
         <div className="flex gap-4 text-xs">
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-neon-cyan" /> Comparing</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-neon-orange" /> Swapping</span>
-          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-neon-purple" /> Sorted</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-primary" /> Comparing</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-destructive" /> Swapping</span>
+          <span className="flex items-center gap-1"><span className="w-3 h-3 rounded bg-secondary" /> Sorted</span>
         </div>
       </div>
     );
@@ -513,7 +1128,14 @@ export default function VisualizePage() {
           {CATEGORIES.map(cat => (
             <button
               key={cat.key}
-              onClick={() => { setCategory(cat.key); if (cat.key === "sorting") { setSelectedAlgo(cat.algorithms[0]); } }}
+              onClick={() => { 
+                setCategory(cat.key); 
+                if (cat.key === "sorting") { 
+                  setSelectedAlgo(cat.algorithms[0]); 
+                } else {
+                  setEditableCode(ALGO_CODE[cat.key === "linkedlist" ? "LinkedList" : cat.key === "stack" ? "Stack" : cat.key === "queue" ? "Queue" : cat.key === "tree" ? "Tree" : "Graph"]);
+                }
+              }}
               className={`px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap transition-all ${category === cat.key ? "bg-primary/15 text-primary neon-glow-blue" : "glass-panel text-muted-foreground hover:text-foreground"}`}
             >
               {cat.label}
@@ -533,20 +1155,89 @@ export default function VisualizePage() {
                 {algo}
               </button>
             ))}
-            <button onClick={generateArray} className="px-3 py-1.5 rounded-md text-xs font-semibold text-neon-orange hover:bg-neon-orange/10 transition-colors ml-auto">
-              New Array
-            </button>
           </div>
         )}
 
-        {/* Visualization area */}
-        <motion.div initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }} className="glass-panel-strong p-8 min-h-[400px] flex items-center justify-center">
-          {category === "sorting" && renderSortingViz()}
-          {category === "linkedlist" && <LinkedListViz />}
-          {category === "stack" && <StackViz />}
-          {category === "tree" && <TreeViz />}
-          {category === "graph" && <GraphViz />}
-        </motion.div>
+        {category === "graph" && (
+          <div className="flex gap-2 mb-6 flex-wrap">
+            {CATEGORIES[5].algorithms.map(algo => (
+              <button
+                key={algo}
+                onClick={() => setSelectedGraphAlgo(algo)}
+                className={`px-3 py-1.5 rounded-md text-xs font-semibold transition-all ${selectedGraphAlgo === algo ? "bg-secondary/20 text-secondary" : "text-muted-foreground hover:text-foreground"}`}
+              >
+                {algo}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* IDE Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-16rem)] min-h-[600px]">
+          {/* Left: Editor */}
+          <div className="lg:col-span-5 flex flex-col h-full overflow-hidden">
+            <CodeBlock code={editableCode} onChange={setEditableCode} />
+            <div className="mt-4 flex gap-2">
+              <button 
+                onClick={category === "sorting" ? generateArray : triggerSync} 
+                className="flex-1 glass-panel py-3 rounded-xl text-xs font-bold text-primary hover:bg-primary/10 transition-all flex items-center justify-center gap-2 border-primary/20"
+              >
+                <RotateCcw className="w-4 h-4" /> 
+                {category === "sorting" ? "Sync & Execute Sort" : "Sync Data & Rebuild"}
+              </button>
+            </div>
+          </div>
+
+          {/* Right: Output + Visualization */}
+          <div className="lg:col-span-7 flex flex-col gap-4 h-full">
+            {/* Output Screen */}
+            <div className="glass-panel-strong p-4">
+              <div className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground/60 mb-2 flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                Console Output
+              </div>
+              <div className="font-mono text-sm text-primary neon-text-blue min-h-[1.5rem] whitespace-pre-line leading-relaxed">
+                <div className="flex items-center gap-2 mb-2 border-b border-primary/10 pb-2">
+                  <span className="opacity-50">{">"}</span>
+                <span className="font-bold">{stepLabel}</span>
+                </div>
+                {consoleLabel}
+                {(category === "linkedlist" || category === "stack" || category === "queue" || category === "graph") && (
+                  <div className="mt-4 flex flex-col gap-2">
+                    <div className="flex gap-2">
+                      <input
+                        value={consoleInput}
+                        onChange={(e) => setConsoleInput(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); submitConsoleCommand(); } }}
+                        placeholder={category === "linkedlist" ? "insert 10 or delete 10" : category === "stack" ? "push 10 or pop" : category === "queue" ? "enqueue 10 or dequeue" : "start A or goal F"}
+                        className="flex-1 rounded-xl border border-primary/20 bg-card/40 px-3 py-2 text-sm text-foreground outline-none focus:border-primary focus:ring-2 focus:ring-primary/20"
+                      />
+                      <button onClick={submitConsoleCommand} className="rounded-xl bg-primary/15 px-4 py-2 text-sm font-semibold text-primary transition hover:bg-primary/25">
+                        Send
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-muted-foreground">Enter a command in the console area to control the current visualizer.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Visualization Stage */}
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.98 }} 
+              animate={{ opacity: 1, scale: 1 }} 
+              className="glass-panel-strong p-8 flex-1 flex items-center justify-center relative overflow-hidden"
+            >
+              <div className="absolute top-4 right-4 text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">Stage</div>
+              {category === "sorting" && renderSortingViz()}
+              {category === "linkedlist" && <LinkedListViz code={editableCode} setLabel={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} />}
+              {category === "stack" && <StackViz code={editableCode} setLabel={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} />}
+              {category === "queue" && <QueueViz code={editableCode} onStep={setStepLabel} onComplete={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} />}
+              {category === "tree" && <TreeViz onStep={setStepLabel} onComplete={setConsoleLabel} />}
+              {category === "graph" && <GraphViz selectedAlgo={selectedGraphAlgo} onStep={setStepLabel} onComplete={setConsoleLabel} commandText={commandText} commandId={commandId} />}
+            </motion.div>
+          </div>
+        </div>
       </div>
     </div>
   );
