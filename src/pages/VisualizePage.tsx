@@ -69,21 +69,20 @@ const ALGO_CODE: Record<string, string> = {
   "LinkedList": `// Edit initial nodes here:
 int data[] = {10, 20, 30, 40};
 
-// Insert at End
-void insertAtEnd(Node** head, int val) {
-  Node* newNode = new Node(val);
-  if (*head == NULL) { *head = newNode; return; }
-  Node* last = *head;
-  while (last->next) last = last->next;
-  last->next = newNode;
-}
+// Variables for Visualizer Actions
+int insert_val = 50;
+int insert_pos = 2; // 0-indexed position
+int delete_val = 30;
 
-// Delete from Head
-void deleteHead(Node** head) {
-  if (*head == NULL) return;
+// Insert at Position
+void insertAtPosition(Node** head, int val, int pos) {
+  Node* newNode = new Node(val);
+  if (pos == 0) { newNode->next = *head; *head = newNode; return; }
   Node* temp = *head;
-  *head = (*head)->next;
-  delete temp;
+  for (int i = 0; temp && i < pos - 1; i++) temp = temp->next;
+  if (!temp) return;
+  newNode->next = temp->next;
+  temp->next = newNode;
 }`,
   "Stack": `// Edit initial data here:
 int MAX_CAPACITY = 10;
@@ -306,7 +305,7 @@ function generateInsertionSortSteps(arr: number[], descending: boolean = false):
 // Linked List visualization
 interface LLNode { value: number; id: number; }
 
-function LinkedListViz({ code, setLabel, syncTrigger, commandText, commandId }: { code: string; setLabel: (l: string) => void; syncTrigger: number; commandText: string; commandId: number }) {
+function LinkedListViz({ code, setLabel, syncTrigger, commandText, commandId, speed }: { code: string; setLabel: (l: string) => void; syncTrigger: number; commandText: string; commandId: number; speed: number }) {
   const [nodes, setNodes] = useState<LLNode[]>([]);
   const [highlight, setHighlight] = useState<number>(-1);
   const nextId = useRef(nodes.length);
@@ -320,8 +319,32 @@ function LinkedListViz({ code, setLabel, syncTrigger, commandText, commandId }: 
     setTimeout(() => {
       setNodes(prev => [...prev, { value: val, id: nextId.current++ }]);
       setLabel(`Inserted ${val}`);
-      setTimeout(() => setHighlight(-1), 500);
-    }, 400);
+      setTimeout(() => setHighlight(-1), speed);
+    }, speed);
+  };
+
+  const insertAtPosition = (pos?: number, value?: number) => {
+    const valMatch = code.match(/insert_val\s*=\s*(\d+)/);
+    const posMatch = code.match(/insert_pos\s*=\s*(\d+)/);
+    const val = value ?? (valMatch ? parseInt(valMatch[1]) : 50);
+    const position = pos ?? (posMatch ? parseInt(posMatch[1]) : 2);
+
+    if (position < 0 || position > nodes.length) {
+      setLabel(`Invalid position ${position}`);
+      return;
+    }
+
+    setHighlight(position);
+    setLabel(`Inserting ${val} at position ${position}...`);
+    setTimeout(() => {
+      setNodes(prev => {
+        const newNodes = [...prev];
+        newNodes.splice(position, 0, { value: val, id: nextId.current++ });
+        return newNodes;
+      });
+      setLabel(`Inserted ${val} at position ${position}`);
+      setTimeout(() => setHighlight(-1), speed);
+    }, speed);
   };
 
   const deleteByValue = (value?: number) => {
@@ -345,7 +368,7 @@ function LinkedListViz({ code, setLabel, syncTrigger, commandText, commandId }: 
       setNodes(prev => prev.filter((_, i) => i !== index));
       setLabel(`Deleted node with value ${val}`);
       setHighlight(-1);
-    }, 600);
+    }, speed);
   };
 
   useEffect(() => {
@@ -360,14 +383,18 @@ function LinkedListViz({ code, setLabel, syncTrigger, commandText, commandId }: 
   useEffect(() => {
     if (!commandText) return;
     const command = commandText.trim().toLowerCase();
+    const insertAtMatch = command.match(/^insert\s+(\d+)\s+at\s+(\d+)$/);
     const insertMatch = command.match(/^insert\s+(\d+)$/);
     const deleteMatch = command.match(/^delete\s+(\d+)$/);
-    if (insertMatch) {
+    
+    if (insertAtMatch) {
+      insertAtPosition(Number(insertAtMatch[2]), Number(insertAtMatch[1]));
+    } else if (insertMatch) {
       insertAtEnd(Number(insertMatch[1]));
     } else if (deleteMatch) {
       deleteByValue(Number(deleteMatch[1]));
     } else {
-      setLabel("Invalid command. Use insert <value> or delete <value>.");
+      setLabel("Invalid command. Use insert <value>, insert <value> at <pos>, or delete <value>.");
     }
   }, [commandId]);
 
@@ -397,7 +424,9 @@ function LinkedListViz({ code, setLabel, syncTrigger, commandText, commandId }: 
                       </div>
                       <div className="px-3 py-2 flex flex-col items-center justify-center border-b border-border/50">
                         <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Next</span>
-                        <span className="text-[11px] font-mono text-primary">0x{(node.id + 1).toString(16).toUpperCase().padStart(4, "0")}</span>
+                        <span className="text-[11px] font-mono text-primary">
+                          {i < nodes.length - 1 ? `0x${(nodes[i + 1].id + 1).toString(16).toUpperCase().padStart(4, "0")}` : "NULL"}
+                        </span>
                       </div>
                     </div>
                   </div>
@@ -416,14 +445,321 @@ function LinkedListViz({ code, setLabel, syncTrigger, commandText, commandId }: 
       </div>
       <div className="flex items-center gap-3">
         <button onClick={() => insertAtEnd()} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold">Insert</button>
+        <button onClick={() => insertAtPosition()} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold">Insert at Position</button>
         <button onClick={() => deleteByValue()} className="glass-panel px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors font-semibold">Delete Node</button>
       </div>
     </div>
   );
 }
 
+
+// Doubly Linked List visualization
+function DoublyLinkedListViz({ code, setLabel, syncTrigger, commandText, commandId, speed }: { code: string; setLabel: (l: string) => void; syncTrigger: number; commandText: string; commandId: number; speed: number }) {
+  const [nodes, setNodes] = useState<LLNode[]>([]);
+  const [highlight, setHighlight] = useState<number>(-1);
+  const nextId = useRef(nodes.length);
+
+  const insertAtEnd = (value?: number) => {
+    const match = code.match(/insert_val\s*=\s*(\d+)/);
+    const val = value ?? (match ? parseInt(match[1]) : 50);
+
+    setHighlight(nodes.length);
+    setLabel(`Inserting ${val} at end...`);
+    setTimeout(() => {
+      setNodes(prev => [...prev, { value: val, id: nextId.current++ }]);
+      setLabel(`Inserted ${val}`);
+      setTimeout(() => setHighlight(-1), speed);
+    }, speed);
+  };
+
+  const insertAtPosition = (pos?: number, value?: number) => {
+    const valMatch = code.match(/insert_val\s*=\s*(\d+)/);
+    const posMatch = code.match(/insert_pos\s*=\s*(\d+)/);
+    const val = value ?? (valMatch ? parseInt(valMatch[1]) : 50);
+    const position = pos ?? (posMatch ? parseInt(posMatch[1]) : 2);
+
+    if (position < 0 || position > nodes.length) {
+      setLabel(`Invalid position ${position}`);
+      return;
+    }
+
+    setHighlight(position);
+    setLabel(`Inserting ${val} at position ${position}...`);
+    setTimeout(() => {
+      setNodes(prev => {
+        const newNodes = [...prev];
+        newNodes.splice(position, 0, { value: val, id: nextId.current++ });
+        return newNodes;
+      });
+      setLabel(`Inserted ${val} at position ${position}`);
+      setTimeout(() => setHighlight(-1), speed);
+    }, speed);
+  };
+
+  const deleteByValue = (value?: number) => {
+    if (nodes.length === 0) {
+      setLabel("List is empty.");
+      return;
+    }
+
+    const match = code.match(/delete_val\s*=\s*(\d+)/);
+    const val = value ?? (match ? parseInt(match[1]) : nodes[0].value);
+
+    const index = nodes.findIndex(n => n.value === val);
+    if (index === -1) {
+      setLabel(`Value ${val} not found in list`);
+      return;
+    }
+
+    setHighlight(index);
+    setLabel(`Deleting node with value ${val}...`);
+    setTimeout(() => {
+      setNodes(prev => prev.filter((_, i) => i !== index));
+      setLabel(`Deleted node with value ${val}`);
+      setHighlight(-1);
+    }, speed);
+  };
+
+  useEffect(() => {
+    const dataMatch = code.match(/data\[\]\s*=\s*\{([^}]+)\}/);
+    if (dataMatch) {
+      const vals = dataMatch[1].split(",").map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+      setNodes(vals.map((v, i) => ({ value: v, id: i })));
+      nextId.current = vals.length;
+    }
+  }, [syncTrigger]); // Triggered on Sync & Build
+
+  useEffect(() => {
+    if (!commandText) return;
+    const command = commandText.trim().toLowerCase();
+    const insertAtMatch = command.match(/^insert\s+(\d+)\s+at\s+(\d+)$/);
+    const insertMatch = command.match(/^insert\s+(\d+)$/);
+    const deleteMatch = command.match(/^delete\s+(\d+)$/);
+    
+    if (insertAtMatch) {
+      insertAtPosition(Number(insertAtMatch[2]), Number(insertAtMatch[1]));
+    } else if (insertMatch) {
+      insertAtEnd(Number(insertMatch[1]));
+    } else if (deleteMatch) {
+      deleteByValue(Number(deleteMatch[1]));
+    } else {
+      setLabel("Invalid command. Use insert <value>, insert <value> at <pos>, or delete <value>.");
+    }
+  }, [commandId]);
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <div className="flex items-center gap-1 overflow-x-auto pb-4 scrollbar-hide">
+        <AnimatePresence mode="popLayout">
+          {nodes.length === 0 ? (
+            <div className="w-full flex items-center justify-center text-sm text-muted-foreground/50 italic min-h-[100px]">Linked List is empty</div>
+          ) : (
+            <>
+              {nodes.map((node, i) => (
+                <motion.div
+                  key={node.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.5, x: -20 }}
+                  animate={{ opacity: 1, scale: 1, x: 0, boxShadow: highlight === i ? "0 0 20px hsl(var(--primary) / 0.6)" : "none" }}
+                  exit={{ opacity: 0, scale: 0.5, x: 20 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  className="flex items-center gap-1"
+                >
+                  <div className={`rounded-lg glass-panel border-2 transition-colors duration-300 ${highlight === i ? "border-primary neon-glow-blue" : "border-border/50"}`}>
+                    <div className="grid grid-cols-3 gap-0 divide-x divide-border/50">
+                      <div className="px-2 py-2 flex flex-col items-center justify-center border-b border-border/50">
+                        <span className="text-[8px] uppercase font-bold text-muted-foreground tracking-wider">Prev</span>
+                        <span className="text-[10px] font-mono text-primary">
+                          {i > 0 ? `0x${(nodes[i - 1].id + 1).toString(16).toUpperCase().padStart(4, "0")}` : "NULL"}
+                        </span>
+                      </div>
+                      <div className="px-3 py-2 flex flex-col items-center justify-center border-b border-border/50">
+                        <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Data</span>
+                        <span className="text-lg font-mono font-bold text-foreground">{node.value}</span>
+                      </div>
+                      <div className="px-2 py-2 flex flex-col items-center justify-center border-b border-border/50">
+                        <span className="text-[8px] uppercase font-bold text-muted-foreground tracking-wider">Next</span>
+                        <span className="text-[10px] font-mono text-primary">
+                          {i < nodes.length - 1 ? `0x${(nodes[i + 1].id + 1).toString(16).toUpperCase().padStart(4, "0")}` : "NULL"}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {i < nodes.length - 1 && <span className="text-primary font-bold text-lg">↔</span>}
+                </motion.div>
+              ))}
+              <div className="flex items-center gap-1">
+                <span className="text-primary font-bold text-lg">↔</span>
+                <div className="rounded-lg glass-panel border-2 border-border/50 px-3 py-2">
+                  <span className="text-xs font-mono text-muted-foreground font-bold">null</span>
+                </div>
+              </div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+      <div className="flex items-center gap-3">
+        <button onClick={() => insertAtEnd()} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold">Insert</button>
+        <button onClick={() => insertAtPosition()} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold">Insert at Position</button>
+        <button onClick={() => deleteByValue()} className="glass-panel px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors font-semibold">Delete Node</button>
+      </div>
+    </div>
+  );
+}
+
+
+// Circular Linked List visualization
+function CircularLinkedListViz({ code, setLabel, syncTrigger, commandText, commandId, speed }: { code: string; setLabel: (l: string) => void; syncTrigger: number; commandText: string; commandId: number; speed: number }) {
+  const [nodes, setNodes] = useState<LLNode[]>([]);
+  const [highlight, setHighlight] = useState<number>(-1);
+  const nextId = useRef(nodes.length);
+
+  const insertAtEnd = (value?: number) => {
+    const match = code.match(/insert_val\s*=\s*(\d+)/);
+    const val = value ?? (match ? parseInt(match[1]) : 50);
+
+    setHighlight(nodes.length);
+    setLabel(`Inserting ${val} at end...`);
+    setTimeout(() => {
+      setNodes(prev => [...prev, { value: val, id: nextId.current++ }]);
+      setLabel(`Inserted ${val}`);
+      setTimeout(() => setHighlight(-1), speed);
+    }, speed);
+  };
+
+  const insertAtPosition = (pos?: number, value?: number) => {
+    const valMatch = code.match(/insert_val\s*=\s*(\d+)/);
+    const posMatch = code.match(/insert_pos\s*=\s*(\d+)/);
+    const val = value ?? (valMatch ? parseInt(valMatch[1]) : 50);
+    const position = pos ?? (posMatch ? parseInt(posMatch[1]) : 2);
+
+    if (position < 0 || position > nodes.length) {
+      setLabel(`Invalid position ${position}`);
+      return;
+    }
+
+    setHighlight(position);
+    setLabel(`Inserting ${val} at position ${position}...`);
+    setTimeout(() => {
+      setNodes(prev => {
+        const newNodes = [...prev];
+        newNodes.splice(position, 0, { value: val, id: nextId.current++ });
+        return newNodes;
+      });
+      setLabel(`Inserted ${val} at position ${position}`);
+      setTimeout(() => setHighlight(-1), speed);
+    }, speed);
+  };
+
+  const deleteByValue = (value?: number) => {
+    if (nodes.length === 0) {
+      setLabel("List is empty.");
+      return;
+    }
+
+    const match = code.match(/delete_val\s*=\s*(\d+)/);
+    const val = value ?? (match ? parseInt(match[1]) : nodes[0].value);
+
+    const index = nodes.findIndex(n => n.value === val);
+    if (index === -1) {
+      setLabel(`Value ${val} not found in list`);
+      return;
+    }
+
+    setHighlight(index);
+    setLabel(`Deleting node with value ${val}...`);
+    setTimeout(() => {
+      setNodes(prev => prev.filter((_, i) => i !== index));
+      setLabel(`Deleted node with value ${val}`);
+      setHighlight(-1);
+    }, speed);
+  };
+
+  useEffect(() => {
+    const dataMatch = code.match(/data\[\]\s*=\s*\{([^}]+)\}/);
+    if (dataMatch) {
+      const vals = dataMatch[1].split(",").map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+      setNodes(vals.map((v, i) => ({ value: v, id: i })));
+      nextId.current = vals.length;
+    }
+  }, [syncTrigger]); // Triggered on Sync & Build
+
+  useEffect(() => {
+    if (!commandText) return;
+    const command = commandText.trim().toLowerCase();
+    const insertAtMatch = command.match(/^insert\s+(\d+)\s+at\s+(\d+)$/);
+    const insertMatch = command.match(/^insert\s+(\d+)$/);
+    const deleteMatch = command.match(/^delete\s+(\d+)$/);
+    
+    if (insertAtMatch) {
+      insertAtPosition(Number(insertAtMatch[2]), Number(insertAtMatch[1]));
+    } else if (insertMatch) {
+      insertAtEnd(Number(insertMatch[1]));
+    } else if (deleteMatch) {
+      deleteByValue(Number(deleteMatch[1]));
+    } else {
+      setLabel("Invalid command. Use insert <value>, insert <value> at <pos>, or delete <value>.");
+    }
+  }, [commandId]);
+
+  return (
+    <div className="flex flex-col items-center gap-6">
+      <div className="flex items-center gap-1 overflow-x-auto pb-4 scrollbar-hide">
+        <AnimatePresence mode="popLayout">
+          {nodes.length === 0 ? (
+            <div className="w-full flex items-center justify-center text-sm text-muted-foreground/50 italic min-h-[100px]">Linked List is empty</div>
+          ) : (
+            <>
+              {nodes.map((node, i) => (
+                <motion.div
+                  key={node.id}
+                  layout
+                  initial={{ opacity: 0, scale: 0.5, x: -20 }}
+                  animate={{ opacity: 1, scale: 1, x: 0, boxShadow: highlight === i ? "0 0 20px hsl(var(--primary) / 0.6)" : "none" }}
+                  exit={{ opacity: 0, scale: 0.5, x: 20 }}
+                  transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                  className="flex items-center gap-1"
+                >
+                  <div className={`rounded-lg glass-panel border-2 transition-colors duration-300 ${highlight === i ? "border-primary neon-glow-blue" : "border-border/50"}`}>
+                    <div className="grid grid-cols-2 gap-0 divide-x divide-border/50">
+                      <div className="px-3 py-2 flex flex-col items-center justify-center border-b border-border/50">
+                        <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Data</span>
+                        <span className="text-lg font-mono font-bold text-foreground">{node.value}</span>
+                      </div>
+                      <div className="px-3 py-2 flex flex-col items-center justify-center border-b border-border/50">
+                        <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Next</span>
+                        <span className="text-[11px] font-mono text-primary">
+                          {i < nodes.length - 1 ? `0x${(nodes[i + 1].id + 1).toString(16).toUpperCase().padStart(4, "0")}` : `0x${(nodes[0]?.id + 1 || 1).toString(16).toUpperCase().padStart(4, "0")}`}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                  {i < nodes.length - 1 && <span className="text-primary font-bold text-lg">→</span>}
+                </motion.div>
+              ))}
+              <div className="flex items-center gap-1">
+                <span className="text-primary font-bold text-lg">→</span>
+                <div className="rounded-lg glass-panel border-2 border-border/50 px-3 py-2 flex flex-col items-center justify-center">
+                  <span className="text-[9px] uppercase font-bold text-muted-foreground tracking-wider">Loops to</span>
+                  <span className="text-xs font-mono text-primary font-bold">Head (0x{(nodes[0]?.id + 1 || 1).toString(16).toUpperCase().padStart(4, "0")})</span>
+                </div>
+              </div>
+            </>
+          )}
+        </AnimatePresence>
+      </div>
+      <div className="flex items-center gap-3">
+        <button onClick={() => insertAtEnd()} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold">Insert</button>
+        <button onClick={() => insertAtPosition()} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold">Insert at Position</button>
+        <button onClick={() => deleteByValue()} className="glass-panel px-4 py-2 text-sm text-destructive hover:bg-destructive/10 transition-colors font-semibold">Delete Node</button>
+      </div>
+    </div>
+  );
+}
+
+
 // Stack visualization
-function StackViz({ code, setLabel, syncTrigger, commandText, commandId }: { code: string; setLabel: (l: string) => void; syncTrigger: number; commandText: string; commandId: number }) {
+function StackViz({ code, setLabel, syncTrigger, commandText, commandId, speed }: { code: string; setLabel: (l: string) => void; syncTrigger: number; commandText: string; commandId: number; speed: number }) {
   const [maxCapacity, setMaxCapacity] = useState(10);
   const [stack, setStack] = useState<{ value: number; id: number }[]>([
     { value: 5, id: 0 }, { value: 12, id: 1 }, { value: 8, id: 2 }
@@ -456,7 +792,7 @@ function StackViz({ code, setLabel, syncTrigger, commandText, commandId }: { cod
 
     setLabel(`Pushing ${val}...`);
     setStack(prev => [...prev, { value: val, id: nextId.current++ }]);
-    setTimeout(() => setLabel(`Pushed ${val}`), 300);
+    setTimeout(() => setLabel(`Pushed ${val}`), speed);
   };
 
   const pop = () => {
@@ -469,7 +805,7 @@ function StackViz({ code, setLabel, syncTrigger, commandText, commandId }: { cod
     setTimeout(() => {
       setStack(prev => prev.slice(0, -1));
       setLabel(`Popped ${val}`);
-    }, 300);
+    }, speed);
   };
 
   useEffect(() => {
@@ -484,7 +820,7 @@ function StackViz({ code, setLabel, syncTrigger, commandText, commandId }: { cod
       }
       setLabel(`Pushing ${val}...`);
       setStack(prev => [...prev, { value: val, id: nextId.current++ }]);
-      setTimeout(() => setLabel(`Pushed ${val}`), 300);
+      setTimeout(() => setLabel(`Pushed ${val}`), speed);
     } else if (command === "pop") {
       pop();
     } else {
@@ -527,7 +863,7 @@ function StackViz({ code, setLabel, syncTrigger, commandText, commandId }: { cod
 }
 
 // Queue visualization
-function QueueViz({ code, onStep, onComplete, syncTrigger, commandText, commandId }: { code: string; onStep: (l: string) => void; onComplete: (l: string) => void; syncTrigger: number; commandText: string; commandId: number }) {
+function QueueViz({ code, onStep, onComplete, syncTrigger, commandText, commandId, speed }: { code: string; onStep: (l: string) => void; onComplete: (l: string | ((prev: string) => string)) => void; syncTrigger: number; commandText: string; commandId: number; speed: number }) {
   const [maxCapacity, setMaxCapacity] = useState(10);
   const [queue, setQueue] = useState<{ value: number; id: number }[]>([]);
   const nextId = useRef(0);
@@ -557,7 +893,7 @@ function QueueViz({ code, onStep, onComplete, syncTrigger, commandText, commandI
     const val = match ? parseInt(match[1]) : 40;
     onStep(`Enqueuing ${val}...`);
     setQueue(prev => [...prev, { value: val, id: nextId.current++ }]);
-    setTimeout(() => { onStep("Visualizer Ready"); onComplete(`Enqueued ${val}`); }, 300);
+    setTimeout(() => { onStep("Visualizer Ready"); onComplete(`Enqueued ${val}`); }, speed);
   };
 
   const dequeue = () => {
@@ -571,7 +907,7 @@ function QueueViz({ code, onStep, onComplete, syncTrigger, commandText, commandI
       setQueue(prev => prev.slice(1));
       onStep("Visualizer Ready");
       onComplete(`Dequeued ${val}`);
-    }, 300);
+    }, speed);
   };
 
   useEffect(() => {
@@ -586,7 +922,7 @@ function QueueViz({ code, onStep, onComplete, syncTrigger, commandText, commandI
       const val = Number(enqueueMatch[1]);
       onStep(`Enqueuing ${val}...`);
       setQueue(prev => [...prev, { value: val, id: nextId.current++ }]);
-      setTimeout(() => { onStep("Visualizer Ready"); onComplete(`Enqueued ${val}`); }, 300);
+      setTimeout(() => { onStep("Visualizer Ready"); onComplete(`Enqueued ${val}`); }, speed);
     } else if (command === "dequeue") {
       dequeue();
     } else {
@@ -637,7 +973,7 @@ const SAMPLE_TREE: TreeNode = {
   right: { value: 70, left: { value: 60 }, right: { value: 80 } },
 };
 
-function TreeViz({ onStep, onComplete }: { onStep: (l: string) => void; onComplete: (l: string) => void }) {
+function TreeViz({ onStep, onComplete, speed }: { onStep: (l: string) => void; onComplete: (l: string) => void; speed: number }) {
   const [highlighted, setHighlighted] = useState<number[]>([]);
   const [visited, setVisited] = useState<number[]>([]);
   const [running, setRunning] = useState(false);
@@ -670,13 +1006,13 @@ function TreeViz({ onStep, onComplete }: { onStep: (l: string) => void; onComple
     traverse(SAMPLE_TREE);
 
     for (let i = 0; i < order.length; i++) {
-      await new Promise(r => setTimeout(r, 600));
+      await new Promise(r => setTimeout(r, speed));
       setHighlighted([order[i]]);
       setVisited(prev => [...prev, order[i]]);
       onStep(`${type}: Visiting ${order[i]}`);
       setLocalStatus(`Visiting ${order[i]}`);
     }
-    await new Promise(r => setTimeout(r, 400));
+    await new Promise(r => setTimeout(r, speed));
     setHighlighted([]);
     onComplete(`${type} complete: [${order.join(", ")}]`);
     onStep("Visualizer Ready");
@@ -725,28 +1061,57 @@ function TreeViz({ onStep, onComplete }: { onStep: (l: string) => void; onComple
   );
 }
 
+const PREDEFINED_GRAPHS = [
+  {
+    nodes: [
+      { id: 0, x: 200, y: 40, label: "A" },
+      { id: 1, x: 80, y: 120, label: "B" },
+      { id: 2, x: 320, y: 120, label: "C" },
+      { id: 3, x: 40, y: 220, label: "D" },
+      { id: 4, x: 160, y: 220, label: "E" },
+      { id: 5, x: 280, y: 220, label: "F" },
+    ],
+    unweightedEdges: [[0, 1], [0, 2], [1, 3], [1, 4], [2, 4], [2, 5], [3, 4], [4, 5]],
+    weightedEdges: [[0, 1, 4], [0, 2, 2], [1, 3, 5], [1, 4, 10], [2, 4, 3], [2, 5, 8], [3, 4, 2], [4, 5, 6]]
+  },
+  {
+    nodes: [
+      { id: 0, x: 200, y: 135, label: "A" },
+      { id: 1, x: 200, y: 40, label: "B" },
+      { id: 2, x: 310, y: 90, label: "C" },
+      { id: 3, x: 310, y: 180, label: "D" },
+      { id: 4, x: 200, y: 230, label: "E" },
+      { id: 5, x: 90, y: 180, label: "F" },
+      { id: 6, x: 90, y: 90, label: "G" },
+    ],
+    unweightedEdges: [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5], [0, 6], [1, 2], [2, 3], [3, 4], [4, 5], [5, 6], [6, 1]],
+    weightedEdges: [[0, 1, 2], [0, 2, 5], [0, 3, 3], [0, 4, 1], [0, 5, 4], [0, 6, 2], [1, 2, 7], [2, 3, 2], [3, 4, 8], [4, 5, 3], [5, 6, 6], [6, 1, 4]]
+  },
+  {
+    nodes: [
+      { id: 0, x: 60, y: 135, label: "A" },
+      { id: 1, x: 150, y: 135, label: "B" },
+      { id: 2, x: 240, y: 135, label: "C" },
+      { id: 3, x: 330, y: 135, label: "D" },
+      { id: 4, x: 195, y: 50, label: "E" },
+      { id: 5, x: 195, y: 220, label: "F" },
+    ],
+    unweightedEdges: [[0, 1], [1, 2], [2, 3], [0, 4], [4, 3], [1, 5], [5, 3]],
+    weightedEdges: [[0, 1, 3], [1, 2, 2], [2, 3, 4], [0, 4, 15], [4, 3, 6], [1, 5, 8], [5, 3, 1]]
+  }
+];
+
 // Graph visualization
-function GraphViz({ selectedAlgo, onStep, onComplete, commandText, commandId }: { selectedAlgo: string; onStep: (l: string) => void; onComplete: (l: string | ((prev: string) => string)) => void; commandText: string; commandId: number }) {
-  const nodes = [
-    { id: 0, x: 200, y: 40, label: "A" },
-    { id: 1, x: 80, y: 120, label: "B" },
-    { id: 2, x: 320, y: 120, label: "C" },
-    { id: 3, x: 40, y: 220, label: "D" },
-    { id: 4, x: 160, y: 220, label: "E" },
-    { id: 5, x: 280, y: 220, label: "F" },
-  ];
-  
-  // Unweighted edges for BFS and DFS
-  const unweightedEdges = [[0, 1], [0, 2], [1, 3], [1, 4], [2, 4], [2, 5], [3, 4], [4, 5]];
-  
-  // Weighted edges for Dijkstra
-  const weightedEdges = [[0, 1, 4], [0, 2, 2], [1, 3, 5], [1, 4, 10], [2, 4, 3], [2, 5, 8], [3, 4, 2], [4, 5, 6]];
+function GraphViz({ selectedAlgo, onStep, onComplete, commandText, commandId, speed }: { selectedAlgo: string; onStep: (l: string) => void; onComplete: (l: string | ((prev: string) => string)) => void; commandText: string; commandId: number; speed: number }) {
+  const [graphIdx, setGraphIdx] = useState(0);
+  const currentGraph = PREDEFINED_GRAPHS[graphIdx];
+  const nodes = currentGraph.nodes;
   
   // Build adjacency list based on algorithm
   const isUsingWeights = selectedAlgo === "Dijkstra";
-  const edges = isUsingWeights ? weightedEdges : unweightedEdges.map(([a, b]) => [a, b, 0]);
+  const edges = isUsingWeights ? currentGraph.weightedEdges : currentGraph.unweightedEdges.map(([a, b]) => [a, b, 0]);
   
-  const adj: { node: number; weight: number }[][] = Array.from({ length: 6 }, () => []);
+  const adj: { node: number; weight: number }[][] = Array.from({ length: nodes.length }, () => []);
   edges.forEach(([a, b, w]) => { adj[a].push({ node: b as number, weight: (w as number) || 1 }); adj[b].push({ node: a as number, weight: (w as number) || 1 }); });
 
   const [visited, setVisited] = useState<number[]>([]);
@@ -758,6 +1123,15 @@ function GraphViz({ selectedAlgo, onStep, onComplete, commandText, commandId }: 
   const [goalNode, setGoalNode] = useState(5);
   const [queueState, setQueueState] = useState<number[]>([]);
   const [stackState, setStackState] = useState<number[]>([]);
+
+  const generateNewGraph = () => {
+    if (running) return;
+    const nextIdx = (graphIdx + 1) % PREDEFINED_GRAPHS.length;
+    setGraphIdx(nextIdx);
+    setStartNode(PREDEFINED_GRAPHS[nextIdx].nodes[0].id);
+    setGoalNode(PREDEFINED_GRAPHS[nextIdx].nodes[PREDEFINED_GRAPHS[nextIdx].nodes.length - 1].id);
+    setVisited([]); setHighlighted([]); setActiveEdges([]); setLocalStatus("Ready");
+  };
 
   useEffect(() => {
     if (!commandText) return;
@@ -787,28 +1161,66 @@ function GraphViz({ selectedAlgo, onStep, onComplete, commandText, commandId }: 
     setVisited([]); setHighlighted([]); setActiveEdges([]); setQueueState([]); setLocalStatus("BFS Running...");
     const queue = [startNode];
     const seen = new Set([startNode]);
+    const prevMap: Record<number, number | null> = { [startNode]: null };
+    let finalPathStr = "";
     setQueueState([startNode]);
-    while (queue.length) {
+    
+    let foundGoal = false;
+
+    if (startNode === goalNode) {
+      setLocalStatus(`Goal ${nodes[goalNode].label} reached!`);
+      finalPathStr = nodes[startNode].label;
+      foundGoal = true;
+    }
+
+    while (queue.length && !foundGoal) {
       const curr = queue.shift()!;
       setQueueState([...queue]);
       setHighlighted([curr]);
       setVisited(prev => [...prev, curr]);
       onStep(`BFS: Visiting ${nodes[curr].label}`);
       setLocalStatus(`Visiting ${nodes[curr].label}`);
-      await new Promise(r => setTimeout(r, 700));
+
+      await new Promise(r => setTimeout(r, speed));
       for (const edge of adj[curr]) {
         const nb = edge.node;
         if (!seen.has(nb)) {
           seen.add(nb);
+          prevMap[nb] = curr;
           queue.push(nb);
           setQueueState([...queue]);
           setActiveEdges(prev => [...prev, `${Math.min(curr, nb)}-${Math.max(curr, nb)}`]);
+          
+          if (nb === goalNode) {
+            setLocalStatus(`Goal ${nodes[goalNode].label} reached!`);
+            setHighlighted([nb]);
+            setVisited(prev => [...prev, nb]);
+            const path = [];
+            const pathEdgeSet: string[] = [];
+            const pathNodeSet: number[] = [];
+            let p: number | null = goalNode;
+            while (p !== null && p !== undefined) {
+              path.push(nodes[p].label);
+              pathNodeSet.push(p);
+              const parent: number | null = prevMap[p];
+              if (parent !== null && parent !== undefined) {
+                pathEdgeSet.push(`${Math.min(parent, p)}-${Math.max(parent, p)}`);
+              }
+              p = parent;
+            }
+            finalPathStr = path.reverse().join("->");
+            setActiveEdges(pathEdgeSet);
+            setVisited(pathNodeSet);
+            setHighlighted([goalNode]);
+            foundGoal = true;
+            break;
+          }
         }
       }
     }
-    setHighlighted([]);
+    if (!foundGoal) setHighlighted([]);
     setQueueState([]);
-    onComplete(prev => prev + "\nBFS complete!");
+    onComplete(finalPathStr ? `BFS complete! Path: ${finalPathStr}` : "BFS complete! No path found.");
     onStep("Visualizer Ready");
     setLocalStatus("Complete");
     setRunning(false);
@@ -820,7 +1232,8 @@ function GraphViz({ selectedAlgo, onStep, onComplete, commandText, commandId }: 
     setVisited([]); setHighlighted([]); setActiveEdges([]); setStackState([]); setLocalStatus("DFS Running...");
     const seen = new Set<number>();
     const stack: number[] = [];
-    const dfs = async (node: number) => {
+    let finalPathStr = "";
+    const dfs = async (node: number): Promise<boolean> => {
       seen.add(node);
       stack.push(node);
       setStackState([...stack]);
@@ -828,21 +1241,37 @@ function GraphViz({ selectedAlgo, onStep, onComplete, commandText, commandId }: 
       setVisited(prev => [...prev, node]);
       onStep(`DFS: Visiting ${nodes[node].label}`);
       setLocalStatus(`Visiting ${nodes[node].label}`);
-      await new Promise(r => setTimeout(r, 700));
+
+      if (node === goalNode) {
+        setLocalStatus(`Goal ${nodes[goalNode].label} reached!`);
+        finalPathStr = stack.map(id => nodes[id].label).join("->");
+        const pathEdgeSet: string[] = [];
+        for (let i = 0; i < stack.length - 1; i++) {
+          pathEdgeSet.push(`${Math.min(stack[i], stack[i+1])}-${Math.max(stack[i], stack[i+1])}`);
+        }
+        setActiveEdges(pathEdgeSet);
+        setVisited([...stack]);
+        setHighlighted([goalNode]);
+        return true;
+      }
+
+      await new Promise(r => setTimeout(r, speed));
       for (const edge of adj[node]) {
         const nb = edge.node;
         if (!seen.has(nb)) {
           setActiveEdges(prev => [...prev, `${Math.min(node, nb)}-${Math.max(node, nb)}`]);
-          await dfs(nb);
+          const found = await dfs(nb);
+          if (found) return true;
         }
       }
       stack.pop();
       setStackState([...stack]);
+      return false;
     };
-    await dfs(startNode);
-    setHighlighted([]);
+    const found = await dfs(startNode);
+    if (!found) setHighlighted([]);
     setStackState([]);
-    onComplete(prev => prev + "\nDFS complete!");
+    onComplete(finalPathStr ? `DFS complete! Path: ${finalPathStr}` : "DFS complete! No path found.");
     onStep("Visualizer Ready");
     setLocalStatus("Complete");
     setRunning(false);
@@ -878,7 +1307,7 @@ function GraphViz({ selectedAlgo, onStep, onComplete, commandText, commandId }: 
         break;
       }
 
-      await new Promise(r => setTimeout(r, 700));
+      await new Promise(r => setTimeout(r, speed));
       for (const edge of adj[current]) {
         const nb = edge.node;
         const weight = edge.weight;
@@ -891,17 +1320,28 @@ function GraphViz({ selectedAlgo, onStep, onComplete, commandText, commandId }: 
       }
     }
 
-    setHighlighted([]);
     const path = [];
+    const pathEdgeSet: string[] = [];
+    const pathNodeSet: number[] = [];
     if (dist[goalNode] !== Number.MAX_SAFE_INTEGER) {
       let curr: number | null = goalNode;
       while (curr !== null) {
         path.push(nodes[curr].label);
-        curr = prev[curr];
+        pathNodeSet.push(curr);
+        const parent = prev[curr];
+        if (parent !== null) {
+          pathEdgeSet.push(`${Math.min(parent, curr)}-${Math.max(parent, curr)}`);
+        }
+        curr = parent;
       }
+      setActiveEdges(pathEdgeSet);
+      setVisited(pathNodeSet);
+      setHighlighted([goalNode]);
+    } else {
+      setHighlighted([]);
     }
     const pathStr = path.length ? path.reverse().join("->") : "No path";
-    onComplete(prev => prev + `\nDijkstra complete! Path: ${pathStr}, Cost: ${dist[goalNode]}`);
+    onComplete(`Dijkstra complete! Path: ${pathStr}, Cost: ${dist[goalNode]}`);
     onStep("Visualizer Ready");
     setLocalStatus("Complete");
     setRunning(false);
@@ -999,10 +1439,28 @@ function GraphViz({ selectedAlgo, onStep, onComplete, commandText, commandId }: 
         </div>
       )}
       
+      <div className="flex gap-4 flex-wrap justify-center w-full px-4">
+        <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+          Start:
+          <select value={startNode} onChange={e => setStartNode(Number(e.target.value))} disabled={running} className="bg-background border border-border/50 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-primary disabled:opacity-50 cursor-pointer">
+            {nodes.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}
+          </select>
+        </label>
+        <label className="text-sm font-semibold text-foreground flex items-center gap-2">
+          Goal:
+          <select value={goalNode} onChange={e => setGoalNode(Number(e.target.value))} disabled={running} className="bg-background border border-border/50 rounded-lg px-2 py-1.5 text-sm outline-none focus:border-primary disabled:opacity-50 cursor-pointer">
+            {nodes.map(n => <option key={n.id} value={n.id}>{n.label}</option>)}
+          </select>
+        </label>
+      </div>
+
       <p className="text-sm text-primary font-mono neon-text-blue">{localStatus}</p>
-      <div className="flex gap-3">
-        <button onClick={runSelectedAlgo} disabled={running} className="glass-panel px-4 py-2 text-sm text-primary hover:bg-primary/10 transition-colors font-semibold disabled:opacity-40">
+      <div className="flex gap-3 flex-wrap justify-center">
+        <button onClick={runSelectedAlgo} disabled={running} className="glass-panel px-6 py-2.5 text-sm text-primary hover:bg-primary/10 transition-colors font-bold disabled:opacity-40">
           Run {selectedAlgo}
+        </button>
+        <button onClick={generateNewGraph} disabled={running} className="glass-panel px-4 py-2.5 text-sm text-muted-foreground hover:text-foreground transition-colors font-semibold disabled:opacity-40">
+          Generate New Graph
         </button>
       </div>
     </div>
@@ -1154,10 +1612,6 @@ export default function VisualizePage() {
             {playing ? <Pause className="w-4 h-4 md:w-5 md:h-5 text-primary" /> : <Play className="w-4 h-4 md:w-5 md:h-5 text-primary" />}
           </button>
           <button onClick={() => setCurrentStep(prev => Math.min(steps.length - 1, prev + 1))} className="glass-panel p-1.5 md:p-2 hover:bg-muted/50 transition-colors"><SkipForward className="w-3 h-3 md:w-4 md:h-4 text-foreground" /></button>
-          <div className="flex items-center gap-1 md:gap-2 w-full sm:w-auto justify-center sm:justify-start ml-0 sm:ml-4 order-last sm:order-none sm:basis-auto basis-full">
-            <Gauge className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground flex-shrink-0" />
-            <input type="range" min={50} max={1000} step={50} value={1050 - speed} onChange={e => setSpeed(1050 - Number(e.target.value))} className="w-20 md:w-24 accent-primary flex-1 md:flex-none" />
-          </div>
         </div>
         <div className="text-[11px] md:text-xs text-muted-foreground">
           Step {currentStep + 1} / {steps.length}
@@ -1228,6 +1682,15 @@ export default function VisualizePage() {
           </div>
         )}
 
+        {/* Global Controls */}
+        <div className="flex justify-end mb-4">
+          <div className="flex items-center gap-1 md:gap-2 w-full sm:w-auto justify-center sm:justify-start bg-card/40 border border-border/50 rounded-lg px-3 py-1.5">
+            <Gauge className="w-3 h-3 md:w-4 md:h-4 text-muted-foreground flex-shrink-0" />
+            <span className="text-[10px] md:text-xs font-semibold text-muted-foreground mr-1">Speed</span>
+            <input type="range" min={50} max={1000} step={50} value={1050 - speed} onChange={e => setSpeed(1050 - Number(e.target.value))} className="w-24 md:w-32 accent-primary cursor-pointer" />
+          </div>
+        </div>
+
         {/* IDE Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-6">
           {/* Left: Editor */}
@@ -1287,11 +1750,11 @@ export default function VisualizePage() {
             >
               <div className="absolute top-2 md:top-4 right-2 md:right-4 text-[8px] md:text-[10px] font-mono text-muted-foreground/40 uppercase tracking-widest">Stage</div>
               {category === "sorting" && renderSortingViz()}
-              {category === "linkedlist" && <LinkedListViz code={editableCode} setLabel={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} />}
-              {category === "stack" && <StackViz code={editableCode} setLabel={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} />}
-              {category === "queue" && <QueueViz code={editableCode} onStep={setStepLabel} onComplete={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} />}
-              {category === "tree" && <TreeViz onStep={setStepLabel} onComplete={setConsoleLabel} />}
-              {category === "graph" && <GraphViz selectedAlgo={selectedGraphAlgo} onStep={setStepLabel} onComplete={setConsoleLabel} commandText={commandText} commandId={commandId} />}
+              {category === "linkedlist" && <LinkedListViz code={editableCode} setLabel={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} speed={speed} />}
+              {category === "stack" && <StackViz code={editableCode} setLabel={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} speed={speed} />}
+              {category === "queue" && <QueueViz code={editableCode} onStep={setStepLabel} onComplete={setConsoleLabel} syncTrigger={syncTrigger} commandText={commandText} commandId={commandId} speed={speed} />}
+              {category === "tree" && <TreeViz onStep={setStepLabel} onComplete={setConsoleLabel} speed={speed} />}
+              {category === "graph" && <GraphViz selectedAlgo={selectedGraphAlgo} onStep={setStepLabel} onComplete={setConsoleLabel} commandText={commandText} commandId={commandId} speed={speed} />}
             </motion.div>
           </div>
         </div>
